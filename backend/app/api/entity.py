@@ -61,7 +61,7 @@ async def get_entity_details(
         first_seen=entity.first_seen.isoformat(),
         last_seen=entity.last_seen.isoformat(),
         connected_entities=connected,
-        metadata=entity.metadata
+        metadata=entity.entity_metadata
     )
 
 

@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 # Import routers
-from app.api import transaction, entity, incident, simulation, chargeback, health
+from app.api import transaction, entity, incident, simulation, chargeback, health, merchants
 
 # Import database initialization
 from app.database import init_db
@@ -50,6 +50,7 @@ app.include_router(entity.router, prefix="/api/v1/risk/entity", tags=["Entity"])
 app.include_router(incident.router, prefix="/api/v1/risk/incidents", tags=["Incident"])
 app.include_router(simulation.router, prefix="/api/v1/risk/simulate", tags=["Simulation"])
 app.include_router(chargeback.router, prefix="/api/v1/risk/chargeback", tags=["Chargeback"])
+app.include_router(merchants.router, prefix="/api/v1/risk/merchants", tags=["Merchants"])
 
 
 @app.get("/")

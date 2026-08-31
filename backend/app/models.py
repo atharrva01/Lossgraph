@@ -123,7 +123,7 @@ class Entity(Base):
     risk_score = Column(Float, default=0.0)
     associated_customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     merchant_id = Column(String, index=True)
-    metadata = Column(JSON, default={})
+    entity_metadata = Column(JSON, default={})  # not `metadata` -- reserved by SQLAlchemy's Declarative API
     
     # Relationships
     associated_customer = relationship("Customer", back_populates="entities")

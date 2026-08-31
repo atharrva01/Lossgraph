@@ -72,28 +72,36 @@ lossgraph/
 ## Quick Start
 
 ### Prerequisites
-- Python 3.9+
-- Node.js 16+
-- PostgreSQL 12+
-- Docker (optional)
+- Python 3.10+
+- Node.js 18+
 
-### Backend Setup
+### 1. Run the intelligence pipeline
+
+Generates the synthetic merchant ecosystem and runs all three engines +
+fusion + loss event detection + counterfactual simulation. The backend
+serves this output; it does not recompute it per request.
+
+```bash
+pip install -r backend/requirements.txt
+make pipeline
+```
+
+### 2. Backend
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-### Frontend Setup
+### 3. Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+Open http://localhost:3000 for the Command Center.
 
 ## Documentation
 

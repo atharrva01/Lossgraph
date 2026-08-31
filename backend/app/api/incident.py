@@ -1,133 +1,81 @@
 """
-Loss event incident endpoints
+Loss event incident endpoints.
+
+Serves Risk Event Genome objects (evidence chain, exposure, counterfactual
+recommendation) produced by the offline ml/ pipeline -- see
+app/data_access.py for why this reads precomputed artifacts rather than
+querying a live DB.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Optional, List
-from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import RiskEvent, EventStatus
+from fastapi import APIRouter, HTTPException, Query
+
+from app.data_access import (
+    PipelineNotRunError, command_center_summary, get_event, graph_for_event,
+    load_events, merchant_name,
+)
 
 router = APIRouter()
 
 
-class RiskEventResponse(BaseModel):
-    """Response schema for risk event"""
-    event_id: str
-    event_type: str
-    merchant_id: str
-    status: str
-    exposure: float
-    confidence: float
-    affected_entities: int
-    affected_transactions: int
-    detection_time: str
-    recommended_action: str
-
-
-class IncidentListResponse(BaseModel):
-    """Response schema for incident list"""
-    active_incidents: int
-    total_exposure: float
-    incidents: List[RiskEventResponse]
-
-
-@router.get("")
-async def get_incidents(
-    merchant_id: str,
-    status: Optional[str] = None,
-    db: Session = Depends(get_db)
-) -> IncidentListResponse:
-    """
-    Get all risk incidents for a merchant
-    
-    Returns active loss events with exposure and confidence
-    """
-    
-    query = db.query(RiskEvent).filter(RiskEvent.merchant_id == merchant_id)
-    
-    if status:
-        query = query.filter(RiskEvent.status == status)
-    else:
-        # Default to active incidents
-        query = query.filter(
-            RiskEvent.status.in_([
-                EventStatus.DETECTED.value,
-                EventStatus.INVESTIGATING.value,
-                EventStatus.CONFIRMED.value
-            ])
-        )
-    
-    incidents = query.all()
-    
-    return IncidentListResponse(
-        active_incidents=len(incidents),
-        total_exposure=sum(inc.exposure for inc in incidents),
-        incidents=[
-            RiskEventResponse(
-                event_id=inc.event_id,
-                event_type=inc.event_type.value,
-                merchant_id=inc.merchant_id,
-                status=inc.status.value,
-                exposure=inc.exposure,
-                confidence=inc.confidence,
-                affected_entities=inc.affected_entity_count,
-                affected_transactions=inc.affected_transaction_count,
-                detection_time=inc.detection_time.isoformat(),
-                recommended_action=inc.recommended_action.value
-            )
-            for inc in incidents
-        ]
-    )
-
-
-@router.get("/{event_id}")
-async def get_incident_details(
-    event_id: str,
-    db: Session = Depends(get_db)
-):
-    """Get detailed information about a risk event"""
-    
-    event = db.query(RiskEvent).filter(RiskEvent.event_id == event_id).first()
-    
-    if not event:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    
+def _event_summary(e: dict) -> dict:
     return {
-        "event_id": event.event_id,
-        "event_type": event.event_type.value,
-        "merchant_id": event.merchant_id,
-        "status": event.status.value,
-        "exposure": event.exposure,
-        "confidence": event.confidence,
-        "affected_entities": event.affected_entity_count,
-        "affected_transactions": event.affected_transaction_count,
-        "detection_time": event.detection_time.isoformat(),
-        "start_time": event.start_time.isoformat(),
-        "recommended_action": event.recommended_action.value,
-        "root_cause": event.root_cause,
-        "evidence": event.evidence,
-        "timeline": event.timeline
+        "event_id": e["event_id"],
+        "source": e["source"],
+        "event_type": e["event_type"],
+        "merchant_id": e["merchant_id"],
+        "merchant_name": merchant_name(e["merchant_id"]),
+        "start_time": e["start_time"],
+        "detection_time": e["detection_time"],
+        "confidence": e["confidence"],
+        "exposure_estimate": e["exposure_estimate"],
+        "affected_transaction_count": e["affected_transaction_count"],
+        "affected_customer_count": e["affected_customer_count"],
+        "primary_driver": e["primary_driver"],
+        "recommended_action": e["counterfactual"]["recommended_action"],
     }
 
 
-@router.patch("/{event_id}/status")
-async def update_incident_status(
-    event_id: str,
-    new_status: str,
-    db: Session = Depends(get_db)
-):
-    """Update the status of an incident"""
-    
-    event = db.query(RiskEvent).filter(RiskEvent.event_id == event_id).first()
-    
-    if not event:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    
+@router.get("")
+async def get_incidents(merchant_id: str = Query(default="ALL")):
+    """Command Center: summary metrics + the incident list, optionally
+    scoped to one merchant."""
     try:
-        event.status = EventStatus[new_status.upper()]
-        db.commit()
-        return {"event_id": event_id, "new_status": event.status.value}
-    except KeyError:
-        raise HTTPException(status_code=400, detail=f"Invalid status: {new_status}")
+        events = load_events()
+        summary = command_center_summary(merchant_id)
+    except PipelineNotRunError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    if merchant_id != "ALL":
+        events = [e for e in events if e["merchant_id"] == merchant_id]
+    events = sorted(events, key=lambda e: e["exposure_estimate"], reverse=True)
+
+    return {**summary, "incidents": [_event_summary(e) for e in events]}
+
+
+@router.get("/{event_id}")
+async def get_incident_details(event_id: str):
+    """Full Risk Event Genome: evidence chain, ground-truth cross-check
+    (evaluation-only -- a real deployment wouldn't have this), and the
+    counterfactual policy comparison."""
+    try:
+        event = get_event(event_id)
+    except PipelineNotRunError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if event is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    return {**event, "merchant_name": merchant_name(event["merchant_id"])}
+
+
+@router.get("/{event_id}/graph")
+async def get_incident_graph(event_id: str):
+    """Cytoscape-ready subgraph for a cluster event. Temporal events (no
+    qualifying shared-entity cluster) return an empty graph by design."""
+    try:
+        event = get_event(event_id)
+    except PipelineNotRunError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    if event is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    return graph_for_event(event)

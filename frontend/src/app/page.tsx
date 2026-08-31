@@ -1,157 +1,119 @@
 /**
- * Home/Dashboard page
+ * Command Center -- main dashboard
  */
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import { AlertTriangle, TrendingUp, BarChart3, Eye, ArrowUp } from 'lucide-react'
+import React, { useEffect, useState } from 'react'
+import { AlertTriangle, ShieldCheck, Siren, TrendingUp } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
-import { IncidentCard } from '@/components/IncidentCard'
-import { incidentApi, healthApi } from '@/lib/api'
+import { IncidentsTable } from '@/components/IncidentsTable'
+import { StatTile } from '@/components/StatTile'
+import { incidentApi, merchantApi } from '@/lib/api'
+import { formatINR } from '@/lib/format'
+import type { CommandCenterResponse, Merchant } from '@/lib/types'
 
-export default function Dashboard() {
-  const [incidents, setIncidents] = useState([])
-  const [stats, setStats] = useState({
-    currentExposure: 0,
-    preventableExposure: 0,
-    activeIncidents: 0,
-    riskAcceleration: 0,
-  })
+export default function CommandCenterPage() {
+  const [merchants, setMerchants] = useState<Merchant[]>([])
+  const [selectedMerchant, setSelectedMerchant] = useState('ALL')
+  const [data, setData] = useState<CommandCenterResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadDashboardData()
+    merchantApi.list().then((res) => setMerchants(res.data)).catch(() => setMerchants([]))
   }, [])
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true)
-      
-      // Check health
-      await healthApi.check()
-      
-      // Load incidents for demo merchant
-      const response = await incidentApi.getIncidents('DEMO_MERCHANT_001', 'detected')
-      setIncidents(response.data.incidents || [])
-      
-      // Set demo stats
-      setStats({
-        currentExposure: 842000,
-        preventableExposure: 517000,
-        activeIncidents: response.data.active_incidents || 0,
-        riskAcceleration: 3.7,
+  useEffect(() => {
+    setLoading(true)
+    incidentApi
+      .getCommandCenter(selectedMerchant)
+      .then((res) => {
+        setData(res.data)
+        setError(null)
       })
-      
-      setError(null)
-    } catch (err) {
-      console.error('Failed to load dashboard data:', err)
-      setError('Failed to load dashboard data. Please try again.')
-      // Set demo data for development
-      setStats({
-        currentExposure: 842000,
-        preventableExposure: 517000,
-        activeIncidents: 4,
-        riskAcceleration: 3.7,
+      .catch((err) => {
+        const detail = err?.response?.data?.detail
+        setError(
+          detail ??
+            'Could not reach the LossGraph API. Is the backend running on http://localhost:8000?'
+        )
+        setData(null)
       })
-    } finally {
-      setLoading(false)
-    }
-  }
+      .finally(() => setLoading(false))
+  }, [selectedMerchant])
 
   return (
     <DashboardLayout>
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-gray-600">Current Exposure</p>
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-          </div>
-          <p className="text-3xl font-bold text-gray-900">
-            ₹{(stats.currentExposure / 100000).toFixed(2)}L
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Merchant Risk Command Center</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Loss events detected on the held-out test split of the synthetic merchant ecosystem
           </p>
-          <p className="text-xs text-gray-500 mt-2">Total at-risk amount</p>
         </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-gray-600">Preventable Exposure</p>
-            <Eye className="w-5 h-5 text-green-500" />
-          </div>
-          <p className="text-3xl font-bold text-gray-900">
-            ₹{(stats.preventableExposure / 100000).toFixed(2)}L
-          </p>
-          <p className="text-xs text-gray-500 mt-2">With optimal intervention</p>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-gray-600">Active Incidents</p>
-            <BarChart3 className="w-5 h-5 text-yellow-500" />
-          </div>
-          <p className="text-3xl font-bold text-gray-900">{stats.activeIncidents}</p>
-          <p className="text-xs text-gray-500 mt-2">Ongoing risk events</p>
-        </div>
-
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-gray-600">Risk Acceleration</p>
-            <ArrowUp className="w-5 h-5 text-orange-500" />
-          </div>
-          <p className="text-3xl font-bold text-gray-900">↑ {stats.riskAcceleration}×</p>
-          <p className="text-xs text-gray-500 mt-2">vs. baseline</p>
-        </div>
+        <select
+          value={selectedMerchant}
+          onChange={(e) => setSelectedMerchant(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="ALL">All Merchants</option>
+          {merchants.map((m) => (
+            <option key={m.merchant_id} value={m.merchant_id}>
+              {m.name} ({m.incident_count})
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Active Loss Events */}
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Active Loss Events</h2>
-        
-        {error && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-yellow-800">{error}</p>
-            <p className="text-xs text-yellow-600 mt-2">Showing demo data for development</p>
-          </div>
-        )}
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+          <p className="text-sm text-yellow-800">{error}</p>
+        </div>
+      )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-gray-600">Loading incidents...</p>
+      {loading ? (
+        <div className="py-16 text-center text-gray-500 text-sm">Loading...</div>
+      ) : data ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatTile
+              label="Current Exposure"
+              value={formatINR(data.current_exposure)}
+              sublabel="Probability-weighted amount at risk"
+              icon={AlertTriangle}
+              iconColor="text-red-500"
+            />
+            <StatTile
+              label="Preventable Exposure"
+              value={formatINR(data.preventable_exposure)}
+              sublabel="Loss prevented by recommended actions"
+              icon={ShieldCheck}
+              iconColor="text-green-500"
+            />
+            <StatTile
+              label="Active Incidents"
+              value={String(data.active_incidents)}
+              sublabel={`of ${data.total_incidents} total events`}
+              icon={Siren}
+              iconColor="text-amber-500"
+            />
+            <StatTile
+              label="Net Benefit"
+              value={formatINR(data.net_benefit_vs_allow)}
+              sublabel="vs. allowing every transaction"
+              icon={TrendingUp}
+              iconColor="text-blue-500"
+            />
           </div>
-        ) : incidents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {incidents.map((incident: any) => (
-              <IncidentCard
-                key={incident.event_id}
-                eventId={incident.event_id}
-                eventType={incident.event_type}
-                exposure={incident.exposure}
-                confidence={incident.confidence}
-                status={incident.status}
-                onClick={() => {
-                  // Navigate to incident details
-                  console.log('Click incident:', incident.event_id)
-                }}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-12 text-center">
-            <p className="text-gray-600">No active incidents detected</p>
-            <p className="text-xs text-gray-500 mt-1">Your merchant is operating normally</p>
-          </div>
-        )}
-      </div>
 
-      {/* Demo Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm font-semibold text-blue-900">Demo Mode</p>
-        <p className="text-xs text-blue-800 mt-1">
-          This dashboard is in development mode. Make sure the backend API is running on http://localhost:8000
-        </p>
-      </div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Loss Events</h2>
+            <p className="text-xs text-gray-400">Click a row to investigate</p>
+          </div>
+          <IncidentsTable incidents={data.incidents} />
+        </>
+      ) : null}
     </DashboardLayout>
   )
 }

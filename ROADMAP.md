@@ -13,7 +13,7 @@
 - [ ] Entity Behavior Models
 - [x] Entity Graph Engine (NetworkX connected components + heuristic scoring) -- `ml/graph_engine.py`
 - [x] Merchant Anomaly Detection (Poisson-style rolling z-score) -- `ml/anomaly_engine.py`
-- [ ] Risk Event Detection Algorithm (fusion of the three -- day 3)
+- [x] Risk Event Detection Algorithm (fusion of the three) -- `ml/loss_events.py`
 
 ## Phase 3: Analysis & Explanation
 - [ ] LLM Integration Layer
@@ -78,38 +78,37 @@
 
 ---
 
-## Milestone Timeline
+## Milestone Timeline (actual: 5-day buildathon build, not the 12-week plan above)
 
-**Week 1-2**: Setup & Basic API
-- ✅ Project structure complete
-- Backend health checks working
-- Frontend scaffold in place
+Applications for this track close 2026-09-05. Built solo; scope was
+deliberately cut from the sections above to what's gradeable and
+demo-able in that window (see "What NOT to Build" reasoning in the
+project's planning history) rather than the full PRD.
 
-**Week 3-4**: Data Models & Database
-- Transaction/entity models implemented
-- Database queries working
-- Initial API endpoints functional
+**Day 1** -- Synthetic data generator (`data/generation/`): baseline
+merchant ecosystem + 10 injected loss/edge-case scenarios, chronological
+train/val/test split, ground truth kept physically separate from features.
 
-**Week 5-6**: ML Models
-- Transaction risk model trained
-- Entity behavior models created
-- Graph algorithms implemented
+**Day 2** -- Three intelligence engines, each held-out evaluated:
+transaction risk model (LightGBM), entity graph engine (NetworkX), merchant
+temporal anomaly engine (Poisson-style rolling z-score). Found and fixed a
+real generator bug the graph engine surfaced (baseline population was
+percolating into one giant connected component).
 
-**Week 7-8**: Dashboard & UI
-- Merchant dashboard built
-- Real-time incident display
-- Graph visualization
+**Day 3** -- Risk fusion (noisy-OR across the three engines), Loss Event
+Genome construction with evidence chains, counterfactual policy simulator,
+economically-optimal action recommendation.
 
-**Week 9-10**: Advanced Features
-- LLM investigator working
-- Counterfactual engine complete
-- Evidence generation functional
+**Day 4** -- FastAPI backend serving the precomputed pipeline output
+(`backend/app/data_access.py`), Next.js dashboard: Command Center, incident
+drill-down with evidence chain + entity graph (Cytoscape.js) + policy
+comparison. Verified end-to-end in a real browser.
 
-**Week 11-12**: Testing & Polish
-- Comprehensive test coverage
-- Performance optimization
-- Documentation complete
-- Deployment ready
+**Day 5 (remaining)** -- Evaluation write-up, architecture documentation,
+5-minute pitch video, repo cleanup, submission. LLM investigator narrative
+and chargeback responder are stretch goals if time remains -- not required
+for the graded rubric (held-out precision/recall + honest false-positive
+cost + strictly defensive).
 
 ---
 

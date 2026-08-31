@@ -180,6 +180,20 @@ generate-data:
 	@python3 -m data.generation.generate --scale demo --seed 42
 	@echo "✓ Data generation complete"
 
+# Full offline intelligence pipeline: synthetic data -> three engines ->
+# fusion -> loss events -> counterfactual simulation. Run this before
+# starting the backend -- it serves these precomputed artifacts, it does
+# not recompute them per request (see backend/app/data_access.py).
+pipeline: generate-data
+	@echo "🧠 Running intelligence pipeline..."
+	@python3 -m ml.risk_model
+	@python3 -m ml.graph_engine
+	@python3 -m ml.anomaly_engine
+	@python3 -m ml.fusion
+	@python3 -m ml.loss_events
+	@python3 -m ml.counterfactual
+	@echo "✓ Pipeline complete -- ml/artifacts/loss_events_with_policy.json ready"
+
 # Build production images
 docker-build:
 	@echo "🔨 Building Docker images..."
