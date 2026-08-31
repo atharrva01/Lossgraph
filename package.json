@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "backend:install": "cd backend && pip install -r requirements.txt",
+    "pipeline": "make pipeline",
     "backend:run": "cd backend && python -m uvicorn app.main:app --reload",
     "backend:test": "cd backend && pytest",
     "frontend:install": "cd frontend && npm install",
