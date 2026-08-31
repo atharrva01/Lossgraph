@@ -10,64 +10,50 @@ LossGraph is an AI-powered merchant risk intelligence system that detects, inves
 
 Unlike conventional fraud models that assign a risk score to individual transactions, LossGraph treats merchant risk as a **temporal, relational and evolving phenomenon**, building a continuously updated **Merchant Risk Graph** that connects transactions, customers, orders, devices, addresses, payment instruments, products, returns, refunds, and chargebacks.
 
-## Key Features
+## Key Features (built and running -- see `docs/ARCHITECTURE.md` for what wasn't)
 
-- **Transaction Intelligence**: Real-time risk scoring of individual transactions
-- **Network Intelligence**: Detection of coordinated abuse patterns across connected entities
-- **Temporal Intelligence**: Identification of emerging loss events and unusual acceleration patterns
-- **Counterfactual Reasoning**: Simulation of intervention strategies and economic impact analysis
-- **Evidence-Grounded Explanations**: Complete audit trails and risk event genomes
-- **Chargeback Responder**: Automated evidence generation for dispute responses
+- **Transaction Intelligence**: LightGBM risk model on leakage-safe, pre-authorization features
+- **Network Intelligence**: NetworkX entity graph detecting coordinated abuse clusters, empirically separated from legitimate shared-device patterns (`docs/EVALUATION.md`)
+- **Temporal Intelligence**: Poisson-style anomaly detection on merchant-level return/dispute rates, the only signal that catches chargeback waves
+- **Risk Fusion**: noisy-OR combination of all three, interpretable back to source
+- **Loss Event Genome**: structured, evidence-chained incidents (not raw transaction scores) with exposure estimates
+- **Counterfactual Reasoning**: 6-policy simulation per event, economically-optimal action recommendation
+- **Dashboard**: Command Center -> incident drill-down with evidence chain, entity graph, policy comparison
 
 ## Architecture
 
 ```
-Transaction Stream
-    ↓
-[Transaction Model] [Time-Series Engine] [Graph Engine]
-    ↓
-    Loss Event Detection
-    ↓
-    Causal Investigation
-    ↓
-    Counterfactual Analysis
-    ↓
-    Action Optimization
-    ↓
-    Merchant Intervention
+Synthetic data generator -> 3 intelligence engines -> fusion -> loss events
+-> counterfactual simulator -> FastAPI -> Next.js dashboard
 ```
+
+Full diagram and design rationale in [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
 ## Project Structure
 
 ```
 lossgraph/
-├── backend/              # FastAPI backend service
-├── frontend/             # React frontend dashboard
-├── ml/                   # Machine learning models
-├── data/                 # Data generation and synthetic datasets
-├── docs/                 # Documentation
-└── tests/                # Test suite
+├── backend/              # FastAPI backend (serves precomputed pipeline output)
+├── frontend/             # Next.js dashboard
+├── ml/                   # The three intelligence engines + fusion + loss events + counterfactual simulator
+├── data/                 # Synthetic data generator + generated dataset
+└── docs/                 # Architecture, evaluation, data model, API reference
 ```
 
 ## Tech Stack
 
 ### Backend
 - **Framework**: FastAPI
-- **Database**: PostgreSQL
-- **Graph**: NetworkX (with optional Neo4j)
+- **Graph**: NetworkX
 
 ### ML
-- **Models**: LightGBM, XGBoost
-- **Features**: scikit-learn, SHAP
-- **Time-Series**: NumPy, Pandas, SciPy
+- **Models**: LightGBM
+- **Explainability**: SHAP
+- **Time-series**: NumPy, Pandas, SciPy (custom Poisson rolling z-score)
 
 ### Frontend
-- **Framework**: React/Next.js
-- **Visualization**: Plotly, D3.js, Cytoscape.js
-
-### Tools
-- **ML Experiments**: MLflow
-- **API Docs**: FastAPI (Swagger/OpenAPI)
+- **Framework**: Next.js (App Router) + TypeScript + Tailwind CSS
+- **Visualization**: Cytoscape.js (entity graph)
 
 ## Quick Start
 
@@ -105,37 +91,25 @@ Open http://localhost:3000 for the Command Center.
 
 ## Documentation
 
-- [Architecture Documentation](./docs/ARCHITECTURE.md)
+- [Quick Start](./QUICKSTART.md) -- get it running, with troubleshooting
+- [Architecture](./docs/ARCHITECTURE.md) -- what was built, what was cut, and why
+- [Evaluation](./docs/EVALUATION.md) -- held-out precision/recall, economic evaluation, stated limitations
 - [Data Model](./docs/DATA_MODEL.md)
 - [API Reference](./docs/API.md)
-- [ML Models](./docs/ML_MODELS.md)
-- [Deployment Guide](./docs/DEPLOYMENT.md)
+- [Roadmap](./ROADMAP.md) -- the real day-by-day build log
+- [Data Generator Design](./data/README.md), [ML Engine Design](./ml/README.md) -- design decisions and bugs found/fixed along the way
 
 ## Development
 
-### Running Tests
+No automated test suite yet -- correctness for the ML pipeline is
+established by held-out evaluation instead (`docs/EVALUATION.md`), and the
+frontend was verified with a real headless-browser pass rather than unit
+tests. Both are gaps worth closing past the buildathon deadline, not
+hidden.
 
 ```bash
-# Backend tests
-cd backend
-pytest
-
-# Frontend tests
-cd frontend
-npm test
-```
-
-### Building for Production
-
-```bash
-# Backend
-cd backend
-python -m pip install -r requirements.txt
-# Use production ASGI server like Gunicorn
-
-# Frontend
-cd frontend
-npm run build
+# Frontend production build (type-checks + lints on build)
+cd frontend && npm run build
 ```
 
 ## Project Principles
@@ -146,22 +120,12 @@ npm run build
 4. **Robustness** - Conservative under legitimate-but-unusual behavior
 5. **Transparency** - Complete audit trails and explainability
 
-## Evaluation Metrics
+## Evaluation
 
-Primary metrics:
-- **Expected Loss Reduction**: How much loss prevented while preserving legitimate commerce
-- **Detection Precision/Recall**: Quality of risk identification
-- **Detection Latency**: Time to identify emerging loss events
-- **False Positive Cost**: Impact on legitimate transactions
+Primary metric is expected loss reduction, not accuracy. Full held-out
+precision/recall, economic evaluation, and honestly-stated limitations are
+in [`docs/EVALUATION.md`](./docs/EVALUATION.md).
 
-## License
+---
 
-[Add appropriate license]
-
-## Contributing
-
-[Add contribution guidelines]
-
-## Contact
-
-[Add contact information]
+Built solo for the Razorpay AI Buildathon, Track 02: AI Risk Manager.

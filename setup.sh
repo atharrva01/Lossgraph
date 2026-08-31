@@ -68,26 +68,29 @@ fi
 
 cd ..
 
+# Intelligence pipeline (synthetic data + all three engines + fusion +
+# loss events + counterfactual simulation) -- the backend serves this
+# output, it doesn't compute it on request.
+echo ""
+echo "🧠 Running the intelligence pipeline..."
+source backend/venv/bin/activate
+make pipeline
+deactivate
+
 # Summary
 echo ""
 echo "✅ Setup Complete!"
 echo ""
 echo "📝 Next steps:"
-echo "  1. Review and update configuration files:"
-echo "     - backend/.env"
-echo "     - frontend/.env.local"
-echo ""
-echo "  2. Start the development servers:"
-echo "     npm run dev"
-echo ""
-echo "  3. Or start individually:"
+echo "  1. Start the development servers:"
 echo "     Terminal 1: cd backend && source venv/bin/activate && python -m uvicorn app.main:app --reload"
 echo "     Terminal 2: cd frontend && npm run dev"
 echo ""
-echo "  4. Open http://localhost:3000 in your browser"
+echo "  2. Open http://localhost:3000 in your browser"
 echo ""
 echo "📚 Documentation:"
-echo "  - Setup: docs/SETUP.md"
+echo "  - Quick start: QUICKSTART.md"
 echo "  - Architecture: docs/ARCHITECTURE.md"
+echo "  - Evaluation: docs/EVALUATION.md"
 echo "  - API Reference: docs/API.md"
 echo "  - Data Model: docs/DATA_MODEL.md"
