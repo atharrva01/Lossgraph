@@ -17,10 +17,10 @@
 
 ## Phase 3: Analysis & Explanation
 - [ ] LLM Integration Layer
-- [ ] Evidence Chain Generation
-- [ ] Counterfactual Simulation Engine
-- [ ] Action Optimizer
-- [ ] Risk Event Genome Creation
+- [x] Evidence Chain Generation -- `ml/loss_events.py` (evidence IDs E1, E2... per event)
+- [x] Counterfactual Simulation Engine -- `ml/counterfactual.py`
+- [x] Action Optimizer (argmax net economic benefit over 6 candidate actions) -- `ml/counterfactual.py`
+- [x] Risk Event Genome Creation -- `ml/loss_events.py` (fuses risk_model + graph_engine + anomaly_engine)
 
 ## Phase 4: Advanced Features
 - [ ] Chargeback Response Automation

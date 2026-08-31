@@ -99,13 +99,18 @@ def score_components(G: nx.Graph, transactions: pd.DataFrame, merchants: pd.Data
 
 
 def score_transactions(transactions: pd.DataFrame, components: pd.DataFrame) -> pd.DataFrame:
-    """Broadcasts each component's graph_risk_score to its member transactions (0 if unclustered)."""
-    cust_to_score = {}
+    """Broadcasts each component's graph_risk_score (and id, for grouping into
+    cluster-level events downstream) to its member transactions. Unclustered
+    customers get score 0 and component_id -1."""
+    cust_to_score, cust_to_component = {}, {}
     for row in components.itertuples(index=False):
         for c in row.customer_ids:
-            cust_to_score[c] = max(cust_to_score.get(c, 0.0), row.graph_risk_score)
+            if row.graph_risk_score > cust_to_score.get(c, -1.0):
+                cust_to_score[c] = row.graph_risk_score
+                cust_to_component[c] = row.component_id
     out = transactions[["transaction_id", "customer_id"]].copy()
     out["graph_risk_score"] = out["customer_id"].map(cust_to_score).fillna(0.0)
+    out["component_id"] = out["customer_id"].map(cust_to_component).fillna(-1).astype(int)
     return out
 
 

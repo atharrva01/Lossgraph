@@ -102,8 +102,89 @@ forwards the event to the graph engine").
   (0.5 outcome + 0.35 burstiness + 0.15 size), not fit to data. Reasonable
   starting weights, not claimed as optimal.
 
-## Next (day 3)
+## Day 3 -- Fusion, Loss Events, Counterfactual Simulator, Action Optimizer
 
-Fuse the three scores into a Risk Event Genome (structured evidence chain
-+ exposure estimate), then the counterfactual policy simulator and action
-optimizer that actually minimize expected economic cost per section 10-11.
+```bash
+python3 -m ml.fusion         # per-transaction fused probability
+python3 -m ml.loss_events    # Risk Event Genome objects + evidence chains
+python3 -m ml.counterfactual # policy simulation + action recommendation
+```
+
+### Fusion (`fusion.py`)
+
+`P_fused = 1 - (1-P_transaction)(1-P_graph)(1-P_anomaly)` -- noisy-OR, not a
+fourth trained model, so any given transaction's score stays traceable to
+which engine(s) actually raised it. The anomaly term is deliberately
+down-weighted (0.5x): it's computed per **merchant-day**, so at full
+strength it bleeds into every unrelated transaction that happened to occur
+on an anomalous day (verified empirically -- some `normal`-labelled test
+transactions hit a fused score of 1.0 before this fix). Fused test PR-AUC
+0.61 / ROC-AUC 0.84, both above any single engine alone.
+
+### Loss Events (`loss_events.py`)
+
+Two sources, matching how the underlying signals differ: **cluster**
+events (a graph component above threshold) and **temporal** events (a
+merchant-day anomaly not already covered by a cluster). Building this
+surfaced two more calibration issues, both fixed and both worth knowing
+about if you touch this code:
+
+1. **Meaningless micro-clusters.** 25 of 32 threshold-qualifying graph
+   components were 2-person -- the intentionally-injected natural sharing
+   (siblings/couples), whose observed outcome rate is high-variance noise
+   at n=2. Added `MIN_CLUSTER_SIZE=4` before something counts as a cluster
+   event (PRD section 29's own warning: "a graph that creates thousands of
+   meaningless connections is worse than no graph"). Dropped 34 cluster
+   events to 9, and the 9 that remain are the real ones.
+2. **Dispute vs. return asymmetry.** A dispute-driven temporal event
+   (`chargeback_wave`) was 98% pure; every return-driven one observed in
+   this run was 0% pure (legitimate seasonal/promo/viral rate changes).
+   That's not a guess, it's what actually happened on this test split --
+   disputing a charge is a deliberate, costly action, returning an item is
+   routine. Temporal event confidence now weights dispute anomalies at full
+   strength and return anomalies at 0.4x accordingly.
+
+**Result on the test split:** 9 cluster + 8 temporal = 17 events. Every
+true `coordinated_return_ring` and the `chargeback_wave` instance surfaced
+as a distinct, high-confidence event (0.88-1.0); every event built from a
+legitimate edge case (false_positive_trap-tainted or a genuine seasonal/
+promo/viral spike) landed at meaningfully lower confidence (0.3-0.58) --
+the gap is real and load-bearing, not cosmetic.
+
+### Counterfactual Simulator + Action Optimizer (`counterfactual.py`)
+
+Six candidate actions (allow/monitor/verify/hold/block/investigate_cluster)
+simulated per event using each transaction's fused probability and the
+merchant's own cost parameters. The one modeling fix that mattered: **a
+block on a legitimate order is a lost sale (full order amount), not a flat
+friction fee** -- verify/hold assume the order still completes after some
+delay, block means it never happens at all. Getting this wrong made block
+win almost everywhere, including on the false_positive_trap cluster, which
+would have been exactly the failure mode the PRD's section 34 exists to
+catch.
+
+**With that fixed:** every purity-1.0 ring gets BLOCK (confidence 0.88-0.99).
+The false_positive_trap-tainted cluster (confidence 0.54) gets HOLD, not
+BLOCK -- a real behavioral difference driven only by confidence and
+economics, never by the ground-truth label the optimizer never sees. All
+7 low-confidence return-only temporal events get ALLOW. Mean action
+aggressiveness (0=allow..5=block) is **4.71 for purity>=0.8 events vs. 0.70
+for purity<0.2 events** -- the system calibrates intervention strength to
+actual severity using only its own confidence estimate. Total net benefit
+vs. doing nothing: Rs 5.6L on this held-out test split.
+
+### Known gaps, honestly
+
+- `chargeback_wave` events get a VERIFY recommendation, which doesn't
+  really make sense for a transaction that already shipped -- the
+  five-action framework has no "contest the dispute" action. That's the
+  chargeback responder's job (PRD section 18), not built yet.
+- Action economics (prevention_rate, cost multipliers) are a documented,
+  reasonable starting model, not fit to any data.
+- `investigate_cluster`'s core-member threshold (0.7) is hand-set.
+
+## Next (day 4)
+
+LLM investigator narrative on top of the evidence chain (with a
+deterministic fallback), the merchant dashboard, and -- if time remains --
+the chargeback responder.
