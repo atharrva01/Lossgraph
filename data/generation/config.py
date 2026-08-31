@@ -22,19 +22,29 @@ class ScaleConfig:
 
 
 DEMO_SCALE = ScaleConfig(
-    n_merchants=5,
-    n_customers=2_000,
-    n_devices=1_700,
-    n_addresses=1_850,
-    n_products=500,
+    # n_merchants=12, not 5: with ~48 scenario instances spread uniformly
+    # across merchants, 5 merchants means ~9-10 instances per merchant with
+    # windows up to 45 days wide inside a ~100-day timeline -- they
+    # frequently overlap in time on the same merchant, which confounds
+    # anomaly-detection evaluation (a flagged day can't be attributed to a
+    # single cause). More merchants thins that density.
+    n_merchants=12,
+    n_customers=2_500,
+    # Only needs a small buffer over n_customers: home_device/home_address
+    # assignment draws without replacement (entities.py), so it's
+    # collision-free by construction -- pool size no longer has to be tuned
+    # against a percolation threshold the way it did before that fix.
+    n_devices=2_700,
+    n_addresses=2_800,
+    n_products=600,
     baseline_daily_transactions=350,
 )
 
 FULL_SCALE = ScaleConfig(
     n_merchants=50,
     n_customers=50_000,
-    n_devices=42_000,
-    n_addresses=46_000,
+    n_devices=55_000,
+    n_addresses=57_000,
     n_products=10_000,
     baseline_daily_transactions=4_500,
 )

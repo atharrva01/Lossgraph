@@ -32,6 +32,7 @@ class IdCounters:
     transaction: int
     device: int
     event: int
+    address: int = 0
 
     def next_customer_id(self) -> str:
         self.customer += 1
@@ -44,6 +45,10 @@ class IdCounters:
     def next_device_id(self) -> str:
         self.device += 1
         return f"DEV-RING-{self.device:05d}"
+
+    def next_address_id(self) -> str:
+        self.address += 1
+        return f"ADDR-RING-{self.address:05d}"
 
     def next_event_id(self, year: int) -> str:
         self.event += 1
@@ -67,23 +72,31 @@ def _spawn_cohort(
     ids: IdCounters,
     shared_devices: Optional[list] = None,
     shared_addresses: Optional[list] = None,
-    device_pool: Optional[np.ndarray] = None,
-    address_pool: Optional[np.ndarray] = None,
+    mint_device: bool = False,
+    mint_address: bool = False,
     payment_pref_pool=("card", "upi", "netbanking", "wallet"),
     segment: str = "new",
 ) -> pd.DataFrame:
+    """
+    New customers never draw a device/address from the shared baseline pool
+    -- that pool is already ~fully claimed by existing customers' home
+    assignments, so a random draw would almost certainly land on someone
+    else's device and create a spurious identity edge. Individual
+    (non-shared) attributes are always freshly minted (globally unique);
+    only `shared_devices`/`shared_addresses` create real graph edges.
+    """
     rows = []
     for _ in range(n):
         if shared_devices:
             home_device = rng.choice(shared_devices)
-        elif device_pool is not None:
-            home_device = rng.choice(device_pool)
+        elif mint_device:
+            home_device = ids.next_device_id()
         else:
             home_device = None
         if shared_addresses:
             home_address = rng.choice(shared_addresses)
-        elif address_pool is not None:
-            home_address = rng.choice(address_pool)
+        elif mint_address:
+            home_address = ids.next_address_id()
         else:
             home_address = None
         rows.append({
@@ -270,7 +283,7 @@ def coordinated_return_ring(ctx, params, rng):
     shared_devices = [ctx.ids.next_device_id() for _ in range(n_shared_devices)]
     cohort = _spawn_cohort(
         ring_size, merchant.merchant_id, window_start, rng, ctx.ids,
-        shared_devices=shared_devices, address_pool=ctx.address_pool, segment="fraud_ring",
+        shared_devices=shared_devices, mint_address=True, segment="fraud_ring",
     )
     cat_products = ctx.products[ctx.products["merchant_id"] == merchant.merchant_id]
     primary_product = cat_products.sample(n=1, random_state=int(rng.integers(0, 2**31 - 1))).iloc[0]["product_id"] if not cat_products.empty else None
@@ -315,7 +328,7 @@ def sudden_fraud_spike(ctx, params, rng):
 
     cohort = _spawn_cohort(
         extra_count, merchant.merchant_id, window_start, rng, ctx.ids,
-        address_pool=ctx.address_pool, device_pool=ctx.device_pool, segment="stolen_card",
+        mint_address=True, mint_device=True, segment="stolen_card",
     )
     cohort["preferred_payment_method"] = "card"
 
@@ -382,7 +395,7 @@ def false_positive_trap(ctx, params, rng):
     shared_devices = [ctx.ids.next_device_id() for _ in range(n_shared)]
     cohort = _spawn_cohort(
         n, merchant.merchant_id, window_start, rng, ctx.ids,
-        shared_devices=shared_devices, address_pool=ctx.address_pool, segment="high_value",
+        shared_devices=shared_devices, mint_address=True, segment="high_value",
     )
     txns = _burst_transactions(
         cohort, merchant, ctx.products, rng, ctx.ids,
@@ -409,10 +422,10 @@ def household_address_sharing(ctx, params, rng):
     window_end = window_start + timedelta(days=30)
     event_id = ctx.ids.next_event_id(window_start.year)
 
-    shared_addr = [rng.choice(ctx.address_pool)]
+    shared_addr = [ctx.ids.next_address_id()]
     cohort = _spawn_cohort(
         n, merchant.merchant_id, window_start, rng, ctx.ids,
-        shared_addresses=shared_addr, device_pool=ctx.device_pool, segment="household",
+        shared_addresses=shared_addr, mint_device=True, segment="household",
     )
     txns = _burst_transactions(
         cohort, merchant, ctx.products, rng, ctx.ids,
@@ -439,7 +452,7 @@ def corporate_device_sharing(ctx, params, rng):
     shared_devices = [ctx.ids.next_device_id(), ctx.ids.next_device_id()]
     cohort = _spawn_cohort(
         n, merchant.merchant_id, window_start, rng, ctx.ids,
-        shared_devices=shared_devices, address_pool=ctx.address_pool, segment="corporate",
+        shared_devices=shared_devices, mint_address=True, segment="corporate",
     )
     txns = _burst_transactions(
         cohort, merchant, ctx.products, rng, ctx.ids,
@@ -475,7 +488,7 @@ def viral_product_spike(ctx, params, rng):
 
     cohort = _spawn_cohort(
         n_customers, merchant.merchant_id, window_start, rng, ctx.ids,
-        device_pool=ctx.device_pool, address_pool=ctx.address_pool, segment="viral_buyer",
+        mint_device=True, mint_address=True, segment="viral_buyer",
     )
     txns = _burst_transactions(
         cohort, merchant, ctx.products, rng, ctx.ids,
@@ -503,7 +516,7 @@ def new_customer_cold_start(ctx, params, rng):
 
     cohort = _spawn_cohort(
         n, merchant.merchant_id, window_start, rng, ctx.ids,
-        device_pool=ctx.device_pool, address_pool=ctx.address_pool, segment="new",
+        mint_device=True, mint_address=True, segment="new",
     )
     txns = _burst_transactions(
         cohort, merchant, ctx.products, rng, ctx.ids,

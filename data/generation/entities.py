@@ -135,8 +135,13 @@ def generate_customers(
     address_ids = addresses["address_id"].to_numpy()
 
     assigned_merchants = rng.choice(merchant_ids, size=n)
-    home_devices = rng.choice(device_ids, size=n)
-    home_addresses = rng.choice(address_ids, size=n)
+    # replace=False: home assignment is collision-free by construction, so
+    # baseline graph sparsity doesn't depend on getting pool-size-vs-customer
+    # ratios "right" -- the only customer-customer edges come from the
+    # explicit, rate-controlled pairing injected below and from scenario
+    # cohorts, never from incidental birthday-paradox collisions.
+    home_devices = rng.choice(device_ids, size=n, replace=False)
+    home_addresses = rng.choice(address_ids, size=n, replace=False)
     payment_prefs = rng.choice(PAYMENT_METHODS, size=n, p=[0.45, 0.35, 0.12, 0.08])
     segments = rng.choice(list(SEGMENT_WEIGHTS.keys()), size=n, p=list(SEGMENT_WEIGHTS.values()))
 
@@ -169,4 +174,25 @@ def generate_customers(
             "true_archetype": "legit",
             "scenario_id": None,
         })
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+
+    # Controlled natural sharing: a small, fixed-rate fraction of customers
+    # (siblings, couples) genuinely share a device/address. Rate is fixed
+    # regardless of scale, so it never risks percolating into a giant
+    # component the way pool-size-dependent random collision would.
+    df = _inject_natural_pairs(df, "home_device_id", rate=0.03, rng=rng)
+    df = _inject_natural_pairs(df, "home_address_id", rate=0.025, rng=rng)
+    return df
+
+
+def _inject_natural_pairs(df: pd.DataFrame, column: str, rate: float, rng: np.random.Generator) -> pd.DataFrame:
+    n = len(df)
+    n_followers = int(n * rate)
+    if n_followers == 0:
+        return df
+    follower_idx = rng.choice(n, size=n_followers, replace=False)
+    leader_idx = rng.integers(0, n, size=n_followers)
+    values = df[column].to_numpy(copy=True)
+    values[follower_idx] = values[leader_idx]
+    df[column] = values
+    return df

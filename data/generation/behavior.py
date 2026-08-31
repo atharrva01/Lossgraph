@@ -51,8 +51,6 @@ def generate_baseline_transactions(
     rng: np.random.Generator,
 ) -> pd.DataFrame:
     merchants_by_id = merchants.set_index("merchant_id")
-    device_ids = devices["device_id"].to_numpy()
-    address_ids = addresses["address_id"].to_numpy()
 
     products_by_merchant = {
         mid: grp[["product_id", "price"]].reset_index(drop=True)
@@ -90,12 +88,16 @@ def generate_baseline_transactions(
         chosen_products = rng.choice(len(cat_products), size=n_orders, p=prod_weights)
         quantities = rng.choice([1, 1, 1, 2, 2, 3], size=n_orders)
 
-        use_home_device = rng.random(n_orders) < 0.94
-        use_home_address = rng.random(n_orders) < 0.90
+        # Rare on purpose: at demo-scale pool sizes, a uniform-random switch is a
+        # long-range edge in the identity graph. Too high a rate and the whole
+        # baseline population percolates into one giant connected component,
+        # which would make every legitimate cluster indistinguishable from a
+        # ring. Real populations are this sparse -- most people use their own
+        # device essentially all the time.
+        use_home_device = rng.random(n_orders) < 0.99
+        use_home_address = rng.random(n_orders) < 0.98
         use_preferred_payment = rng.random(n_orders) < 0.85
 
-        random_devices = rng.choice(device_ids, size=n_orders)
-        random_addresses = rng.choice(address_ids, size=n_orders)
         random_payments = rng.choice(PAYMENT_METHODS, size=n_orders)
 
         return_p = np.clip(merchant.baseline_return_rate * cust.return_propensity, 0, 0.9)
@@ -134,8 +136,11 @@ def generate_baseline_transactions(
                 "amount": amount,
                 "timestamp": order_time,
                 "payment_method": cust.preferred_payment_method if use_preferred_payment[i] else random_payments[i],
-                "device_id": cust.home_device_id if use_home_device[i] else random_devices[i],
-                "address_id": cust.home_address_id if use_home_address[i] else random_addresses[i],
+                # A one-off device/address (never reused) rather than a draw from the
+                # shared pool: models "used a friend's phone / a cybercafe once"
+                # without creating an incidental edge to some unrelated customer.
+                "device_id": cust.home_device_id if use_home_device[i] else f"DEV-ONESHOT-{txn_counter}",
+                "address_id": cust.home_address_id if use_home_address[i] else f"ADDR-ONESHOT-{txn_counter}",
                 "product_id": prod["product_id"],
                 "status": "approved",
                 "is_returned": bool(is_returned[i]),

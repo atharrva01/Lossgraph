@@ -9,11 +9,11 @@
 ✅ Deployment configuration
 
 ## Phase 2: Core Intelligence Engines
-- [ ] Transaction Risk Model (LightGBM/XGBoost)
+- [x] Transaction Risk Model (LightGBM) -- `ml/risk_model.py`
 - [ ] Entity Behavior Models
-- [ ] Temporal Graph Engine
-- [ ] Merchant Anomaly Detection
-- [ ] Risk Event Detection Algorithm
+- [x] Entity Graph Engine (NetworkX connected components + heuristic scoring) -- `ml/graph_engine.py`
+- [x] Merchant Anomaly Detection (Poisson-style rolling z-score) -- `ml/anomaly_engine.py`
+- [ ] Risk Event Detection Algorithm (fusion of the three -- day 3)
 
 ## Phase 3: Analysis & Explanation
 - [ ] LLM Integration Layer
@@ -27,14 +27,14 @@
 - [ ] Evidence Contradiction Detection
 - [ ] Risk Propagation Algorithm
 - [ ] Temporal Pattern Analysis
-- [ ] Seasonal Baseline Normalization
+- [x] Seasonal Baseline Normalization (Poisson-style pooled trailing baseline in the anomaly engine)
 
 ## Phase 5: Testing & Evaluation
-- [ ] Synthetic Data Generator
-- [ ] Scenario-based Testing
-- [ ] Evaluation Framework
+- [x] Synthetic Data Generator -- `data/generation/`, see `data/README.md`
+- [x] Scenario-based Testing (10 injected loss/edge-case scenario types)
+- [x] Evaluation Framework (held-out precision/recall/PR-AUC + economic metrics) -- `ml/evaluation.py`
 - [ ] Model Benchmarking
-- [ ] Cold-start Handling
+- [x] Cold-start Handling (merchant-baseline fallback for new customers in `ml/features.py`)
 
 ## Phase 6: Production Ready
 - [ ] Authentication & Authorization
