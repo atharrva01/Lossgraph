@@ -1,0 +1,10 @@
+{
+  "scenario_type": "false_positive_trap",
+  "category": "edge_case",
+  "description": "High-value legitimate customers sharing a device (corporate-procurement-like), steady activity over 2 weeks, normal outcome rates. Structurally resembles a ring but is not one.",
+  "instances": {"train": 2, "val": 1, "test": 2},
+  "params": {
+    "legitimate_high_value_customers": 20,
+    "similarity_to_risky_cluster": "high"
+  }
+}

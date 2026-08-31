@@ -1,0 +1,7 @@
+{
+  "scenario_type": "corporate_device_sharing",
+  "category": "edge_case",
+  "description": "Employees share two corporate devices, ordering during business hours only, with low return/chargeback rates.",
+  "instances": {"train": 2, "val": 1, "test": 1},
+  "params": {"employee_count": 12}
+}

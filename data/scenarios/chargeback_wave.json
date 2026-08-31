@@ -1,0 +1,11 @@
+{
+  "scenario_type": "chargeback_wave",
+  "category": "loss",
+  "description": "A batch of earlier, already-approved transactions gets disputed together weeks later.",
+  "instances": {"train": 3, "val": 1, "test": 2},
+  "params": {
+    "n_transactions": 25,
+    "source_lookback_days": 35,
+    "duration_hours": 24
+  }
+}

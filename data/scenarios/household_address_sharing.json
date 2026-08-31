@@ -1,0 +1,7 @@
+{
+  "scenario_type": "household_address_sharing",
+  "category": "edge_case",
+  "description": "A handful of family members share one delivery address with normal ordering/return behaviour.",
+  "instances": {"train": 3, "val": 1, "test": 1},
+  "params": {"household_size": 4}
+}

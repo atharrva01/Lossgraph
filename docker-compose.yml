@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: lossgraph-db
+    environment:
+      POSTGRES_USER: lossgraph
+      POSTGRES_PASSWORD: lossgraph_dev
+      POSTGRES_DB: lossgraph
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lossgraph"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lossgraph-network
+
+  # Redis (for caching, optional)
+  redis:
+    image: redis:7-alpine
+    container_name: lossgraph-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lossgraph-network
+
+  # Neo4j Graph Database (optional)
+  neo4j:
+    image: neo4j:5-community
+    container_name: lossgraph-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/lossgraph_dev
+    ports:
+      - "7687:7687"
+      - "7474:7474"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD", "wget", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lossgraph-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lossgraph-backend
+    environment:
+      DATABASE_URL: postgresql://lossgraph:lossgraph_dev@postgres:5432/lossgraph
+      API_PORT: 8000
+      API_HOST: 0.0.0.0
+      LOG_LEVEL: INFO
+      REDIS_URL: redis://redis:6379
+      NEO4J_URL: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: lossgraph_dev
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - lossgraph-network
+
+  # React/Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lossgraph-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev
+    networks:
+      - lossgraph-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  neo4j_data:
+  neo4j_logs:
+
+networks:
+  lossgraph-network:
+    driver: bridge
+
+# Usage:
+# Start all services: docker-compose up
+# Stop all services: docker-compose down
+# View logs: docker-compose logs -f [service-name]
+# Rebuild: docker-compose up --build

@@ -1,0 +1,13 @@
+{
+  "scenario_type": "fraud_spike",
+  "category": "loss",
+  "description": "Abrupt burst of card-testing-style transactions with elevated decline and later dispute rates, concentrated in a short window.",
+  "instances": {"train": 3, "val": 1, "test": 2},
+  "params": {
+    "baseline_fraud_rate": 0.012,
+    "spike_rate": 0.085,
+    "duration_hours": 6,
+    "affected_category": "electronics",
+    "estimated_daily_volume": 250
+  }
+}

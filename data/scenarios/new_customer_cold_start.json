@@ -1,0 +1,7 @@
+{
+  "scenario_type": "new_customer_cold_start",
+  "category": "edge_case",
+  "description": "A cohort of brand-new customers each place a single order with no shared entities and normal outcomes -- newness alone should not read as risky.",
+  "instances": {"train": 2, "val": 1, "test": 1},
+  "params": {"n_customers": 30}
+}

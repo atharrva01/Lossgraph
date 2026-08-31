@@ -1,0 +1,7 @@
+{
+  "scenario_type": "viral_product_spike",
+  "category": "edge_case",
+  "description": "One product suddenly sells to many unrelated new customers with no shared devices/addresses and normal outcome rates.",
+  "instances": {"train": 2, "val": 1, "test": 1},
+  "params": {"duration_hours": 30, "n_customers": 150}
+}

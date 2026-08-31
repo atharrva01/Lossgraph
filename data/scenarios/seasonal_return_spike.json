@@ -1,0 +1,7 @@
+{
+  "scenario_type": "seasonal_return_spike",
+  "category": "edge_case",
+  "description": "A broad-based rise in returns across unrelated customers (e.g. post-holiday) with no entity clustering.",
+  "instances": {"train": 2, "val": 1, "test": 1},
+  "params": {"n_transactions": 60, "source_lookback_days": 21, "duration_hours": 72}
+}
