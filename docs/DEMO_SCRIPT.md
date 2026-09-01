@@ -16,6 +16,10 @@ but will drift if the generator or engines are edited.
 4. Have these four pages open in tabs ahead of time so you're not typing
    URLs on camera: Command Center, the incident at RE-2026-00002, the
    incident at RE-2026-00009, and the incident at RE-2026-00013.
+5. Practice the cold open (below) out loud three or four times before you
+   hit record. It's the only part of this whole video written to be
+   memorized rather than glanced at -- if you're reading it off a
+   teleprompter, the audience can tell, and it stops working.
 
 **About the AI narratives:** with `GEMINI_API_KEY` set (a free key from
 https://aistudio.google.com/apikey), `make pipeline` produces real
@@ -31,156 +35,204 @@ pipeline well before you sit down to record, not live on camera.
 
 ---
 
-## 0:00-0:25 -- Open on the real problem
+## 0:00-0:35 -- Cold open
 
-**Say it like this:** "Most fraud tools look at one transaction and ask:
-is this risky? I built LossGraph to ask a different question -- is this
-merchant walking into a loss event right now, and what's the cheapest way
-to stop it? And here's why that distinction actually matters. A
-coordinated return ring looks completely fine transaction by transaction
--- nothing about any single order stands out. A chargeback wave gives you
-zero signal at the moment someone buys, because the dispute doesn't show
-up for weeks. Both of those are invisible to a model scoring one
-transaction at a time. Both of them get caught here. Let me show you."
+Don't show the dashboard yet. Black screen or your face on camera --
+this is the one part of the video that should feel spoken, not narrated
+over a UI.
 
-**Screen:** Command Center, already loaded, sitting still for a second
-before you start talking.
+**Say it like this:** "Picture a merchant's dashboard on Razorpay. Over
+about a day and a half, fifteen orders come in from seven different
+customer accounts. Seven different names, seven different emails, seven
+accounts that, on paper, have never talked to each other. Not one of
+those fifteen orders trips a fraud score on its own -- no stolen card, no
+unusual velocity for that account, nothing wrong with any single order
+in isolation. It's only when you connect all fifteen that something
+jumps out: every one of those seven accounts is quietly using the same
+device. And by the time the returns start coming back -- seven of the
+fifteen orders, more than twenty times this merchant's normal return
+rate -- the money's already gone, and the merchant's fraud tool never
+said a word, because it was never built to look at seven accounts at
+once. It was built to look at one order at a time.
 
-## 0:25-1:05 -- Command Center
+That's the blind spot LossGraph exists to close. Not 'is this
+transaction risky' -- ask that question fifteen separate times and you
+get fifteen separate 'no's. The right question is 'is this merchant
+walking into a loss event right now, across all of these accounts at
+once' -- and that's what I built. Everything from here is that system,
+live, answering that question on data it's never seen before. Let's go."
 
-**Say it like this:** "This is the Command Center, and everything on it
-is real output from a held-out test split -- data none of these models
-ever trained on. ₹11.99L of current exposure, ₹6.03L of that is
-preventable by the actions the system is already recommending, and 9 of
-17 detected events are still active. And notice what's actually in this
-table -- it's not a list of suspicious transactions. Every row is a Loss
-Event: either a cluster of accounts behaving like a coordinated ring, or
-a day where a merchant's dispute rate spiked way past its own normal.
-Let me click into one."
+**Screen:** hard cut to the Command Center, already loaded.
 
-**Do:** hover the merchant filter dropdown once, just to show it's live,
-don't dwell on it.
+## 0:35-1:10 -- Command Center
 
-## 1:05-2:05 -- Investigate a real ring, and prove it's not a black box
+**Say it like this:** "This is the Command Center. And before I point at
+a single number, I want to be upfront about what you're looking at --
+this is real output from a held-out test split. Not cherry-picked, not
+tuned to look good for this video. Data the models never trained on.
+
+₹11.99 lakh of exposure sitting on this merchant network right now.
+₹6.03 lakh of that is already preventable, just by taking the actions
+the system is recommending below. Nine of seventeen detected events
+still need attention. And here's the part that actually matters --
+every row in this table isn't a transaction. It's a Loss Event. A
+cluster of accounts moving together, or a single day where a merchant's
+dispute rate broke away from its own normal. Let's open the loudest one."
+
+**Do:** hover the merchant filter once, just to show it's live -- don't
+dwell.
+
+## 1:10-2:10 -- Investigate a real ring, and prove it's not a black box
 
 **Do:** click the `Coordinated Return Ring` row at 99% confidence
 (RE-2026-00002, Home Goods Store 3).
 
-**Say it like this:** "This is a ring at 99% confidence. Instead of just
-trusting that number, look at this panel: 'how the confidence score was
-computed.' Three completely independent engines score this event -- a
-LightGBM transaction model at 88%, an entity graph engine at 90%, and a
-temporal anomaly engine at 35%. They're combined with something called a
-noisy-OR, not an average, because if even one engine is confident,
-that's enough to move the fused score. That's the 99% you just saw, and
-now you know exactly which engine drove it instead of trusting a black
-box.
+**Say it like this:** "Ninety-nine percent confidence. Now, I could just
+tell you to trust that number. I'm not going to -- look at this panel
+instead: 'how the confidence score was computed.' Three completely
+independent engines looked at this event. A transaction risk model, at
+88%. An entity graph engine, at 90%. A temporal anomaly engine, way down
+at 35%. They're combined with something called a noisy-OR, not an
+average -- the logic is, if even one engine is confident, that's enough
+to raise the alarm, because you don't want three-way agreement as the
+bar for catching a ring. That math is what produces the 99% you just
+saw. You're not trusting a black box. You're looking at exactly which
+engine did the work.
 
-Below that is the actual evidence chain -- 7 accounts linked through one
-shared device and 7 shared addresses, a return rate 22 times the
-merchant's baseline, 15 transactions crammed into 1.7 days. Every one of
-these is machine-checked against a real number before it's shown here.
-And this narrative up top, this case-file summary, is written by Gemini.
-But it can't invent anything -- it only narrates evidence that's already
-there, it never sees which of these are actually fraud in my ground
-truth, and every sentence has to cite one of these evidence IDs or it
-gets thrown out and replaced with a template before it ever reaches this
-screen."
+Scroll down and it gets more concrete. Seven accounts, tied together by
+one shared device and seven shared delivery addresses. A return rate 22
+times this merchant's baseline. Fifteen transactions crammed into a day
+and a half. Every single one of these is machine-checked against a
+real number before it's allowed on this screen -- not asserted, checked.
+And this write-up at the top, this case file? That's Gemini. But it's on
+a short leash: it only narrates evidence that already exists here, it
+never sees which of these transactions are actually fraud in my ground
+truth, and if any sentence it writes can't be traced back to one of
+these evidence IDs, it gets thrown out and replaced with a template
+before it ever reaches your screen."
 
 **Do:** scroll to the entity graph, point at the single red device node
 with customer nodes fanned around it.
 
-**Say it like this:** "And here's the actual shared-device pattern -- one
-device, seven customer accounts, each with its own delivery address.
-This is built with NetworkX -- connected components and a transparent
-scoring formula, not a black-box graph model."
+**Say it like this:** "And this is the actual shape of it. One device.
+Seven customers hanging off it like spokes, each with their own
+delivery address to make it look less obvious. NetworkX, connected
+components, a scoring formula you could read in an afternoon -- not a
+graph neural net I'd have to ask you to trust."
 
-## 2:05-2:55 -- Why a shared device isn't the crime
+## 2:10-3:00 -- The test I built to try to fool my own system
 
 **Do:** go back, open the other ring event at 54% confidence
 (RE-2026-00009, Electronics Store 10, recommended action `Hold`).
 
-**Say it like this:** "Now here's the part I actually care about most.
-This cluster shares a device too -- eight accounts, structurally almost
-identical to the one I just showed you. But its confidence is 54%, not
-99%, and the system recommends Hold, not Block. Why? Because I built
-this one deliberately, as a legitimate high-value customer segment that
-happens to share a device -- think a household, or a small office. Normal
-return rates, steady activity over two weeks instead of a 48-hour burst.
-The system tells these two apart on outcome and burstiness, not on the
-presence of a shared device -- which is exactly the naive rule that gets
-a lot of fraud tools wrong, and flags real customers for it."
+**Say it like this:** "Now, this next part is the part I actually built
+this whole demo to show you. This cluster shares a device too. Eight
+accounts. Structurally, on paper, it looks almost identical to the ring
+I just showed you. I know it does, because I designed it to -- this is
+corporate device sharing, deliberately built into my synthetic data to
+see whether the system would tell it apart from an actual ring. A small
+office -- people who genuinely share one computer and one delivery
+address because that's how they work, not because they're coordinating
+anything.
+
+The system didn't fall for it. 54% confidence, not 99%. Hold, not Block.
+And I'd rather show you the actual numbers than just tell you it worked:
+this cluster's return rate is 7.7%, about four times this merchant's
+baseline -- elevated, sure, people do return things -- but nowhere near
+the real ring's 46.7%, which is over twenty times baseline. And where the
+real ring crammed fifteen orders into a day and a half, this one is
+thirteen orders spread across twenty-six days. Almost no burst at all.
+That's the actual tell the system is keying on -- not 'do these accounts
+share a device,' but 'does the outcome, and the timing, look
+coordinated.' And that distinction is the entire difference between a
+fraud tool that works and one that just flags every office that shares a
+printer."
 
 **Do:** scroll to Simulate Intervention on the 99% ring (RE-2026-00002);
 point at Block winning with the highest net benefit.
 
-**Say it like this:** "And this changes the actual recommendation
-economically, not just the label. For the confirmed ring, Block wins --
-₹1.86L of net benefit. For the ambiguous cluster, the same optimizer
-picks Hold, because wrongly blocking a real customer costs the full
-sale, not some flat friction fee. That one modeling detail is the
-difference between a system that blocks everything it's suspicious of
-and one that doesn't."
+**Say it like this:** "And it's not just a label that changes -- the
+actual recommended action changes with it, because both of these run
+through the same economic simulator. The real ring: Block wins, ₹1.86
+lakh of net benefit. The trap: the same optimizer picks Hold, because
+wrongly blocking one of those legitimate customers costs the full sale,
+not some flat verification fee. I had to fix that exact assumption
+partway through building this -- the first version charged the same
+tiny fee for a wrongful block as a wrongful hold, which meant Block
+could win economically even on clusters exactly like this one. Getting
+the cost model right was the difference between a system that's
+actually careful and one that just looks careful."
 
-## 2:55-3:50 -- The chargeback wave, and closing the loop
+## 3:00-3:55 -- The chargeback wave, and closing the loop
 
 **Do:** open the `Chargeback Wave` event (RE-2026-00013, Electronics
 Store 1, 100% confidence).
 
-**Say it like this:** "Now watch what happens on a completely different
-kind of event. This is a chargeback wave -- 51 transactions, 47
-customers. Look at the confidence breakdown again: transaction model,
-0%. Graph engine, 3%. Temporal anomaly engine -- 100%. That's not a bug,
-that's the whole point. These transactions looked completely ordinary
-the moment they happened -- no device sharing, nothing unusual about any
-single order. The only thing that gave this away was the merchant's
-dispute rate spiking weeks later, and only one of my three engines is
-even watching for that. That's the entire reason this is three engines
-and not one better model -- a transaction-time model, by construction,
-catches zero percent of this."
+**Say it like this:** "This one's a completely different animal. Fifty-
+one transactions, forty-seven customers, 100% confidence -- and watch
+the breakdown this time. Transaction model: 0%. Graph engine: 3%.
+Temporal anomaly engine: 100%. That's not a rounding error, that's the
+entire argument for why this is three engines and not one better model.
+These fifty-one orders looked completely unremarkable the moment they
+happened. No shared device, no velocity spike, nothing. The only thing
+that gave this away was the merchant's own dispute rate breaking away
+from its baseline, weeks after the fact -- and a transaction-time risk
+score is structurally blind to that. It doesn't exist yet at checkout.
+Only a model watching the outcome stream over time even has a chance."
 
 **Do:** scroll to Linked Chargebacks on this same page, click one case
 (CB-0001).
 
-**Say it like this:** "And here's where it closes the loop. This dispute
-just came in -- customer says duplicate charge. But the system doesn't
-treat it as a fresh case. It already flagged this exact transaction,
-independently, as part of that chargeback wave, before this dispute ever
-arrived. So the recommendation isn't 'contest this,' it's 'accept it' --
-because contesting would mean arguing against the system's own earlier
-finding. Every accept recommendation like this one, all 74 of them,
-checked out 100% correct against my held-out ground truth."
+**Say it like this:** "And here's the loop closing in real time. This
+dispute just came in -- customer's claiming a duplicate charge. A normal
+dispute-response tool would treat this as a brand new case and start
+from zero. This system doesn't. It already flagged this exact
+transaction, independently, as part of that chargeback wave, before
+this dispute ever existed. So it doesn't say 'contest this.' It says
+'accept it' -- because contesting would mean arguing against a finding
+the system already made on its own. All 74 of these accept
+recommendations checked out 100% correct against my held-out ground
+truth. Not most. All of them."
 
-## 3:50-4:25 -- The honest numbers
+## 3:55-4:30 -- The honest numbers
 
 **Do:** navigate to the How It Works page, scroll to the numbers at the
 bottom.
 
-**Say it like this:** "All of this is backed by numbers I'd actually
-defend. On the held-out test split, the fused model gets a PR-AUC of
-0.61, beating every single engine on its own. The economically-tuned
-policy prevents 79% of gross loss. And this is the number I trust the
-most: the system's own aggressiveness -- how hard it pushes toward Block
-versus Allow -- tracks ground truth almost perfectly, even though it
-never sees the label while deciding. Events that turn out to be real
-loss average 4.71 out of 5. False alarms average 0.70. That gap didn't
-come from tuning against these numbers after the fact -- it came from
-fixing a real bug in how I was modeling false-positive cost.
+**Say it like this:** "I want to close on the numbers I'd actually stand
+behind in front of anyone. On the held-out test split: 0.61 PR-AUC for
+the fused model, beating every engine running alone. 79% of gross loss
+prevented at the threshold the economics actually justify. And the one
+I trust the most -- the system's own aggressiveness, how hard it pushes
+toward Block versus Allow, tracks ground truth almost perfectly, even
+though it never sees the label while it's deciding. Events that turn
+out to be real loss: 4.71 out of 5 on average. False alarms: 0.70. That
+gap wasn't tuned to look good. It's what fell out after I fixed a real
+bug in how false-positive cost was modeled.
 
-And to be upfront: this all runs on synthetic data with injected, known
-ground truth -- that's actually what let me measure any of this honestly
-in the first place. Nothing here touches live Razorpay data, and nothing
-in this pipeline does anything but detect and explain. There's no
-offensive capability anywhere in it."
+And one more thing, because I'd rather say it than have you wonder: this
+runs entirely on synthetic data with injected, known ground truth --
+which is exactly what let me measure any of this honestly instead of
+just asserting it. It doesn't touch live Razorpay data, and there is
+nothing offense-capable anywhere in this pipeline. It detects. It
+explains. That's the whole job."
 
-## 4:25-4:50 -- Close
+## 4:30-5:00 -- Close
 
-**Say it like this:** "I built this solo, in about a week: a synthetic
+**Say it like this:** "I built this alone, in about a week: a synthetic
 merchant ecosystem with ten injected scenarios, three independently
-evaluated intelligence engines, risk fusion, a counterfactual policy
+evaluated intelligence engines, a fusion layer, a counterfactual policy
 simulator that reasons in rupees instead of fixed thresholds, an AI
-investigator, and a chargeback responder that closes the loop back to
-detection -- all of it actually running end to end, not mocked. Repo
+investigator on a short leash, and a chargeback responder that closes
+the loop straight back to detection. All of it running end to end, right
+now, not mocked for this video.
+
+The seven accounts and one shared device I opened with -- that's not a
+hypothetical. It's RE-2026-00002, sitting right there in this dashboard,
+caught before the merchant ever had to notice. That's the bet I'm
+making: that the next generation
+of risk tools shouldn't be asking whether one transaction looks
+suspicious. They should be asking whether something is happening. Repo
 link and the full evaluation writeup are in the description."
 
 **Screen:** back on the Command Center, wide shot, hold for 2-3 seconds.
@@ -189,10 +241,12 @@ link and the full evaluation writeup are in the description."
 
 ## Cut list if running long
 
-Drop in this order: the merchant-filter demo (0:55), the second evidence
-item beyond E1/E2/E4 if you're narrating extra ones (1:45), the closing
-feature list (4:25). Keep the ring-vs-legitimate-cluster comparison
-(2:05-2:55) and the chargeback-wave -> linked-dispute finale (2:55-3:50)
-no matter what -- those two are the actual differentiators, and the
-finale is the moment the whole architecture clicks into place for
-someone watching cold.
+Drop in this order: the merchant-filter demo (1:00), the "I had to fix
+that exact assumption" aside in the trap section (2:45) -- keep it if you
+can, it's the single best proof-of-rigor line in the video, but it's the
+first thing to cut. Do not cut the cold open, the trap-versus-ring
+comparison (2:10-3:00), or the chargeback-wave finale (3:00-3:55) -- those
+three are what separate this from a feature walkthrough. If you're still
+over five minutes, tighten sentences inside each beat rather than
+dropping a beat entirely; this script was written to survive being read
+slightly faster, not to survive losing a section.
