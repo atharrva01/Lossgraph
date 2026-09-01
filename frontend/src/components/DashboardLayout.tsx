@@ -12,6 +12,7 @@ import { Shield } from 'lucide-react'
 const NAV_LINKS = [
   { href: '/', label: 'Command Center' },
   { href: '/chargebacks', label: 'Chargebacks' },
+  { href: '/how-it-works', label: 'How It Works' },
 ]
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({

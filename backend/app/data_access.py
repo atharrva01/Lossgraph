@@ -72,6 +72,11 @@ def load_chargeback_cases() -> list:
         return json.load(f)
 
 
+@lru_cache(maxsize=1)
+def load_fused_scores() -> pd.DataFrame:
+    return pd.read_csv(_require(ARTIFACT_DIR / "fused_scores.csv"))
+
+
 def get_event(event_id: str) -> dict | None:
     return next((e for e in load_events() if e["event_id"] == event_id), None)
 
@@ -114,6 +119,25 @@ def command_center_summary(merchant_id: str | None = None) -> dict:
         "active_incidents": len(active_events),
         "total_incidents": len(events),
         "net_benefit_vs_allow": round(net_benefit, 2),
+    }
+
+
+def engine_breakdown_for_event(event: dict) -> dict:
+    """The three per-engine scores that were fused into this event's
+    confidence, averaged over its member transactions -- this is what
+    actually makes the fused number legible instead of a black box.
+    Computed on the fly from fused_scores.csv rather than stored on the
+    event itself, so this didn't require re-running the LLM-dependent
+    pipeline stages to add."""
+    fused = load_fused_scores()
+    txns = fused[fused["transaction_id"].isin(event["transaction_ids"])]
+    if txns.empty:
+        return {"transaction_model": 0.0, "graph_engine": 0.0, "anomaly_engine": 0.0, "fused": event["confidence"]}
+    return {
+        "transaction_model": round(float(txns["risk_score"].mean()), 4),
+        "graph_engine": round(float(txns["graph_risk_score"].mean()), 4),
+        "anomaly_engine": round(float(txns["anomaly_score"].mean()), 4),
+        "fused": round(float(txns["fused_score"].mean()), 4),
     }
 
 

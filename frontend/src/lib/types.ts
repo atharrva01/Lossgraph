@@ -74,6 +74,13 @@ export interface LinkedChargeback {
   amount: number
 }
 
+export interface EngineBreakdown {
+  transaction_model: number
+  graph_engine: number
+  anomaly_engine: number
+  fused: number
+}
+
 export interface IncidentDetail extends IncidentSummary {
   gross_amount_at_risk: number
   affected_entity_count: number
@@ -83,6 +90,7 @@ export interface IncidentDetail extends IncidentSummary {
   counterfactual: Counterfactual
   investigation?: Investigation
   linked_chargebacks: LinkedChargeback[]
+  engine_breakdown: EngineBreakdown
 }
 
 export interface ChargebackEvidenceItem {

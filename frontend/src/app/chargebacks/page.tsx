@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AlertOctagon, ShieldCheck, ShieldQuestion } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
@@ -31,7 +32,8 @@ export default function ChargebacksPage() {
         <h1 className="text-2xl font-bold text-gray-900">Chargeback Responder</h1>
         <p className="text-sm text-gray-500 mt-1">
           Evidence-assembled dispute cases, cross-checked against this system&apos;s own loss-event detection
-          before recommending a response
+          before recommending a response.{' '}
+          <Link href="/how-it-works" className="text-blue-600 hover:underline">How is this computed?</Link>
         </p>
       </div>
 

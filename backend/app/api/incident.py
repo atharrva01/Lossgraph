@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.data_access import (
     PipelineNotRunError, chargeback_cases_for_event, command_center_summary,
-    get_event, graph_for_event, load_events, merchant_name,
+    engine_breakdown_for_event, get_event, graph_for_event, load_events, merchant_name,
 )
 
 router = APIRouter()
@@ -69,7 +69,12 @@ async def get_incident_details(event_id: str):
          "amount": c["amount"]}
         for c in chargeback_cases_for_event(event_id)
     ]
-    return {**event, "merchant_name": merchant_name(event["merchant_id"]), "linked_chargebacks": linked_chargebacks}
+    return {
+        **event,
+        "merchant_name": merchant_name(event["merchant_id"]),
+        "linked_chargebacks": linked_chargebacks,
+        "engine_breakdown": engine_breakdown_for_event(event),
+    }
 
 
 @router.get("/{event_id}/graph")

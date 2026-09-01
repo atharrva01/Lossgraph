@@ -5,6 +5,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { AlertTriangle, ShieldCheck, Siren, TrendingUp } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { IncidentsTable } from '@/components/IncidentsTable'
@@ -49,7 +50,12 @@ export default function CommandCenterPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Merchant Risk Command Center</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Loss events detected on the held-out test split of the synthetic merchant ecosystem
+            Not a list of risky transactions -- each row below is a <strong>Loss Event</strong>: a
+            coordinated pattern across customers, devices and time, detected on data this system never
+            trained on.{' '}
+            <Link href="/how-it-works" className="text-blue-600 hover:underline">
+              How is this computed?
+            </Link>
           </p>
         </div>
         <select

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { AlertTriangle, ArrowLeft, Clock, FlaskConical, Target, Users } from 'lucide-react'
 import { DashboardLayout } from '@/components/DashboardLayout'
+import { EngineBreakdown } from '@/components/EngineBreakdown'
 import { EvidenceChain } from '@/components/EvidenceChain'
 import { GraphView } from '@/components/GraphView'
 import { InvestigationPanel } from '@/components/InvestigationPanel'
@@ -51,9 +52,14 @@ export default function IncidentDetailPage() {
 
   return (
     <DashboardLayout>
-      <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-4">
-        <ArrowLeft className="w-4 h-4" /> Back to Command Center
-      </Link>
+      <div className="flex items-center justify-between mb-4">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+          <ArrowLeft className="w-4 h-4" /> Back to Command Center
+        </Link>
+        <Link href="/how-it-works" className="text-sm text-blue-600 hover:underline">
+          New here? See how this page is computed →
+        </Link>
+      </div>
 
       <div className="flex items-start justify-between mb-6">
         <div>
@@ -101,6 +107,10 @@ export default function IncidentDetailPage() {
         />
       </div>
 
+      <div className="mb-8">
+        <EngineBreakdown data={incident.engine_breakdown} />
+      </div>
+
       {incident.investigation && (
         <section className="mb-8">
           <InvestigationPanel investigation={incident.investigation} />
@@ -109,12 +119,19 @@ export default function IncidentDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-3">Why was this detected?</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Why was this detected?</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Every claim below is machine-checked to trace back to a real number -- click to expand.
+          </p>
           <EvidenceChain evidence={incident.evidence} />
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-3">Entity Graph</h2>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">Entity Graph</h2>
+          <p className="text-xs text-gray-500 mb-3">
+            Blue = customer, red = device, orange = address. An edge means that customer used that
+            device/address. This is what the graph engine's score above is measuring.
+          </p>
           {graph && graph.nodes.length > 0 ? (
             <GraphView graph={graph} />
           ) : (
@@ -159,7 +176,12 @@ export default function IncidentDetailPage() {
       )}
 
       <section className="mb-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">Simulate Intervention</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Simulate Intervention</h2>
+        <p className="text-xs text-gray-500 mb-3">
+          For each possible action, the estimated Rupee cost/benefit if the merchant took it right now.
+          The highlighted row (green) is whichever has the highest net benefit -- not necessarily the
+          most aggressive one.
+        </p>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <PolicyComparison counterfactual={incident.counterfactual} />
         </div>
