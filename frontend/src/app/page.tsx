@@ -46,14 +46,14 @@ export default function CommandCenterPage() {
 
   return (
     <DashboardLayout>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-start justify-between mb-8 gap-6 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Merchant Risk Command Center</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Not a list of risky transactions -- each row below is a <strong>Loss Event</strong>: a
+          <h1 className="text-2xl font-display font-semibold text-ink tracking-tight">Merchant Risk Command Center</h1>
+          <p className="text-sm text-slate-500 mt-1.5 max-w-2xl">
+            Not a list of risky transactions -- each row below is a <strong className="text-ink font-semibold">Loss Event</strong>: a
             coordinated pattern across customers, devices and time, detected on data this system never
             trained on.{' '}
-            <Link href="/how-it-works" className="text-blue-600 hover:underline">
+            <Link href="/how-it-works" className="text-brand-600 font-medium hover:underline">
               How is this computed?
             </Link>
           </p>
@@ -61,7 +61,7 @@ export default function CommandCenterPage() {
         <select
           value={selectedMerchant}
           onChange={(e) => setSelectedMerchant(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+          className="border border-line rounded-lg px-3 py-2 text-sm bg-surface shadow-card"
         >
           <option value="ALL">All Merchants</option>
           {merchants.map((m) => (
@@ -73,29 +73,29 @@ export default function CommandCenterPage() {
       </div>
 
       {error && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-yellow-800">{error}</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <p className="text-sm text-amber-800">{error}</p>
         </div>
       )}
 
       {loading ? (
-        <div className="py-16 text-center text-gray-500 text-sm">Loading...</div>
+        <div className="py-16 text-center text-slate-500 text-sm">Loading...</div>
       ) : data ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
             <StatTile
               label="Current Exposure"
               value={formatINR(data.current_exposure)}
               sublabel="Probability-weighted amount at risk"
               icon={AlertTriangle}
-              iconColor="text-red-500"
+              iconColor="text-risk-500"
             />
             <StatTile
               label="Preventable Exposure"
               value={formatINR(data.preventable_exposure)}
               sublabel="Loss prevented by recommended actions"
               icon={ShieldCheck}
-              iconColor="text-green-500"
+              iconColor="text-success"
             />
             <StatTile
               label="Active Incidents"
@@ -109,13 +109,13 @@ export default function CommandCenterPage() {
               value={formatINR(data.net_benefit_vs_allow)}
               sublabel="vs. allowing every transaction"
               icon={TrendingUp}
-              iconColor="text-blue-500"
+              iconColor="text-brand-600"
             />
           </div>
 
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">Loss Events</h2>
-            <p className="text-xs text-gray-400">Click a row to investigate</p>
+            <h2 className="text-lg font-display font-semibold text-ink">Loss Events</h2>
+            <p className="text-xs text-slate-400">Click a row to investigate</p>
           </div>
           <IncidentsTable incidents={data.incidents} />
         </>

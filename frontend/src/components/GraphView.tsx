@@ -69,8 +69,8 @@ export function GraphView({ graph }: { graph: GraphData }) {
 
   return (
     <div>
-      <div ref={containerRef} className="w-full h-96 bg-gray-50 rounded-lg border border-gray-200" />
-      <div className="flex gap-4 mt-3 text-xs text-gray-500">
+      <div ref={containerRef} className="w-full h-96 bg-canvas rounded-xl shadow-card" />
+      <div className="flex gap-4 mt-3 text-xs text-slate-500">
         {Object.entries(TYPE_COLOR).map(([type, color]) => (
           <div key={type} className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: color }} />

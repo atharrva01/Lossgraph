@@ -11,13 +11,15 @@ export function StatTile({
   iconColor: string
 }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-surface rounded-xl shadow-card p-5">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm font-medium text-gray-600">{label}</p>
-        <Icon className={`w-5 h-5 ${iconColor}`} />
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+        <span className={`w-8 h-8 rounded-lg flex items-center justify-center bg-current/10 ${iconColor}`}>
+          <Icon className="w-4 h-4" />
+        </span>
       </div>
-      <p className="text-3xl font-bold text-gray-900">{value}</p>
-      <p className="text-xs text-gray-500 mt-2">{sublabel}</p>
+      <p className="text-2xl font-display font-semibold text-ink tabular-nums">{value}</p>
+      <p className="text-xs text-slate-500 mt-2 leading-relaxed">{sublabel}</p>
     </div>
   )
 }

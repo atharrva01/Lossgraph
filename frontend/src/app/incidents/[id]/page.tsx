@@ -11,6 +11,7 @@ import { GraphView } from '@/components/GraphView'
 import { InvestigationPanel } from '@/components/InvestigationPanel'
 import { PolicyComparison } from '@/components/PolicyComparison'
 import { StatTile } from '@/components/StatTile'
+import { Badge } from '@/components/Badge'
 import { incidentApi } from '@/lib/api'
 import { actionStyle, eventTypeLabel, formatDateTime, formatINR } from '@/lib/format'
 import type { GraphData, IncidentDetail } from '@/lib/types'
@@ -35,14 +36,14 @@ export default function IncidentDetailPage() {
   if (error) {
     return (
       <DashboardLayout>
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-risk-600">{error}</p>
       </DashboardLayout>
     )
   }
   if (!incident) {
     return (
       <DashboardLayout>
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-slate-500">Loading...</p>
       </DashboardLayout>
     )
   }
@@ -53,10 +54,10 @@ export default function IncidentDetailPage() {
   return (
     <DashboardLayout>
       <div className="flex items-center justify-between mb-4">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-ink">
           <ArrowLeft className="w-4 h-4" /> Back to Command Center
         </Link>
-        <Link href="/how-it-works" className="text-sm text-blue-600 hover:underline">
+        <Link href="/how-it-works" className="text-sm text-brand-600 font-medium hover:underline">
           New here? See how this page is computed →
         </Link>
       </div>
@@ -64,25 +65,23 @@ export default function IncidentDetailPage() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-gray-900">{eventTypeLabel(incident.event_type)}</h1>
-            <span className={`text-xs font-semibold px-2 py-1 rounded ${style.bg} ${style.text}`}>
-              Recommended: {style.label}
-            </span>
+            <h1 className="text-2xl font-display font-semibold text-ink tracking-tight">{eventTypeLabel(incident.event_type)}</h1>
+            <Badge tone={style} label={`Recommended: ${style.label}`} />
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500 font-mono">
             {incident.event_id} &middot; {incident.merchant_name} &middot;{' '}
             {incident.source === 'cluster' ? 'Graph-clustered event' : 'Temporal anomaly event'}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
         <StatTile
           label="Exposure"
           value={formatINR(incident.exposure_estimate)}
           sublabel={`${formatINR(incident.gross_amount_at_risk)} gross amount at risk`}
           icon={AlertTriangle}
-          iconColor="text-red-500"
+          iconColor="text-risk-500"
         />
         <StatTile
           label="Confidence"
@@ -96,14 +95,14 @@ export default function IncidentDetailPage() {
           value={String(incident.affected_customer_count)}
           sublabel={`${incident.affected_transaction_count} transactions, ${incident.affected_entity_count} shared entities`}
           icon={Users}
-          iconColor="text-blue-500"
+          iconColor="text-brand-600"
         />
         <StatTile
           label="Detected"
           value={formatDateTime(incident.detection_time)}
           sublabel={`started ${formatDateTime(incident.start_time)}`}
           icon={Clock}
-          iconColor="text-gray-500"
+          iconColor="text-slate-500"
         />
       </div>
 
@@ -119,24 +118,24 @@ export default function IncidentDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">Why was this detected?</h2>
-          <p className="text-xs text-gray-500 mb-3">
+          <h2 className="text-lg font-display font-semibold text-ink mb-1">Why was this detected?</h2>
+          <p className="text-xs text-slate-500 mb-3">
             Every claim below is machine-checked to trace back to a real number -- click to expand.
           </p>
           <EvidenceChain evidence={incident.evidence} />
         </section>
 
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">Entity Graph</h2>
-          <p className="text-xs text-gray-500 mb-3">
+          <h2 className="text-lg font-display font-semibold text-ink mb-1">Entity Graph</h2>
+          <p className="text-xs text-slate-500 mb-3">
             Blue = customer, red = device, orange = address. An edge means that customer used that
             device/address. This is what the graph engine's score above is measuring.
           </p>
           {graph && graph.nodes.length > 0 ? (
             <GraphView graph={graph} />
           ) : (
-            <div className="h-96 bg-gray-50 rounded-lg border border-dashed border-gray-300 flex items-center justify-center text-center px-8">
-              <p className="text-sm text-gray-500">
+            <div className="h-96 bg-surface rounded-xl border border-dashed border-line flex items-center justify-center text-center px-8">
+              <p className="text-sm text-slate-500">
                 No qualifying shared-entity cluster -- this event was detected from the merchant-day
                 anomaly signal alone, not a device/address graph pattern.
               </p>
@@ -147,11 +146,11 @@ export default function IncidentDetailPage() {
 
       {incident.linked_chargebacks.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-3">
+          <h2 className="text-lg font-display font-semibold text-ink mb-3">
             Linked Chargebacks ({incident.linked_chargebacks.length})
           </h2>
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-3">
+          <div className="bg-surface rounded-xl shadow-card p-4">
+            <p className="text-sm text-slate-600 mb-3">
               These disputes trace back to this Loss Event -- detected independently, before any of them arrived.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -159,13 +158,13 @@ export default function IncidentDetailPage() {
                 <Link
                   key={cb.case_id}
                   href={`/chargebacks/${cb.case_id}`}
-                  className="text-xs font-medium px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100"
+                  className="text-xs font-mono font-medium px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100"
                 >
                   {cb.case_id}
                 </Link>
               ))}
               {incident.linked_chargebacks.length > 30 && (
-                <span className="text-xs text-gray-400 self-center">
+                <span className="text-xs text-slate-400 self-center">
                   +{incident.linked_chargebacks.length - 30} more --{' '}
                   <Link href="/chargebacks" className="underline">view all</Link>
                 </span>
@@ -176,18 +175,18 @@ export default function IncidentDetailPage() {
       )}
 
       <section className="mb-8">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Simulate Intervention</h2>
-        <p className="text-xs text-gray-500 mb-3">
+        <h2 className="text-lg font-display font-semibold text-ink mb-1">Simulate Intervention</h2>
+        <p className="text-xs text-slate-500 mb-3">
           For each possible action, the estimated Rupee cost/benefit if the merchant took it right now.
           The highlighted row (green) is whichever has the highest net benefit -- not necessarily the
           most aggressive one.
         </p>
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="bg-surface rounded-xl shadow-card p-4">
           <PolicyComparison counterfactual={incident.counterfactual} />
         </div>
       </section>
 
-      <section className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+      <section className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-2">
           <FlaskConical className="w-4 h-4 text-indigo-600" />
           <p className="text-sm font-semibold text-indigo-900">Ground Truth (evaluation only)</p>
