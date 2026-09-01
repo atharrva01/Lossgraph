@@ -18,7 +18,7 @@ Unlike conventional fraud models that assign a risk score to individual transact
 - **Risk Fusion**: noisy-OR combination of all three, interpretable back to source
 - **Loss Event Genome**: structured, evidence-chained incidents (not raw transaction scores) with exposure estimates
 - **Counterfactual Reasoning**: 6-policy simulation per event, economically-optimal action recommendation
-- **AI Investigator**: Claude Opus 5 writes an evidence-grounded case-file narrative per event (citation-checked, never sees ground truth, cannot override the deterministic recommendation), with a verified deterministic fallback when no API key is configured
+- **AI Investigator**: Gemini writes an evidence-grounded case-file narrative per event (citation-checked, never sees ground truth, cannot override the deterministic recommendation), with a verified deterministic fallback when no API key is configured
 - **Chargeback Responder**: evidence checklist + contradiction detection per dispute, cross-referenced against this system's own loss-event detection -- 74/74 ACCEPT recommendations verified correct against ground truth, each linked back to the Loss Event it traces to
 - **Dashboard**: Command Center -> incident drill-down with evidence chain, entity graph, AI investigation, linked chargebacks, policy comparison; a separate Chargebacks section
 
@@ -52,7 +52,7 @@ lossgraph/
 - **Models**: LightGBM
 - **Explainability**: SHAP
 - **Time-series**: NumPy, Pandas, SciPy (custom Poisson rolling z-score)
-- **AI Investigator**: Anthropic Claude Opus 5 (`client.messages.parse()`, Pydantic structured output), deterministic fallback
+- **AI Investigator**: Google Gemini (`google-genai`, Pydantic structured output via `response_schema`), deterministic fallback
 
 ### Frontend
 - **Framework**: Next.js (App Router) + TypeScript + Tailwind CSS

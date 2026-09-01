@@ -190,9 +190,9 @@ python3 -m ml.investigator
 ```
 
 Turns each event's evidence chain into a plain-English case-file narrative
-using Claude Opus 5 (`client.messages.parse()` with a Pydantic output
-schema -- see `docs/ARCHITECTURE.md` for the full design). Three things
-matter more than the prose quality:
+using Gemini (`google-genai`, `response_schema=` a Pydantic model -- see
+`docs/ARCHITECTURE.md` for the full design and why the provider is Gemini,
+not a fixed one). Three things matter more than the prose quality:
 
 1. **Ground truth is never in the model's input.** Only evidence,
    confidence, exposure, and the already-decided `recommended_action` --
@@ -203,15 +203,16 @@ matter more than the prose quality:
    `contradicting_evidence` references an actual `E1`/`E2`/... from the
    input. A response that fails this check is treated as a failure, not
    accepted with a warning.
-3. **The fallback path is exercised for real, not simulated.** This repo
-   has no `ANTHROPIC_API_KEY` configured anywhere -- so every narrative
-   currently in `ml/artifacts/loss_events_with_policy.json` was produced by
-   `_fallback_narrative()`, not the LLM. Verified with a mock-client test
-   (well-formed response passes through, an uncited claim triggers
-   fallback, a raised exception triggers fallback) since the live API path
-   can't be exercised without a key -- see the git history for the test
-   script. Set `ANTHROPIC_API_KEY` before `make pipeline` to get real
-   narratives instead; nothing else about the pipeline changes.
+3. **Both paths are verified for real.** With `GEMINI_API_KEY` unset (the
+   default for a fresh clone -- the working `.env` used during development
+   is gitignored and never committed), every narrative falls back to
+   `_fallback_narrative()`, exercising section 43's "LLM unavailable" path
+   for real, not simulated. With a real key, this was verified end to end
+   too: 17/17 events got genuine Gemini narratives after fixing two real
+   bugs the first live run surfaced (see `ROADMAP.md`'s Day 8 entry --
+   wrong model choice caused silent JSON truncation, and free-tier rate
+   limits needed pacing, not just a retry). Both the failure path and the
+   success path were tested against something real, not just mocked.
 
 ## Chargeback Responder (`chargeback_responder.py`)
 
@@ -249,14 +250,16 @@ Loss Event and are surfaced on both that event's page ("Linked
 Chargebacks") and each case's own page -- the dispute-to-detection link
 described in the product spec's demo script, real rather than staged.
 
-The optional Claude Opus 5 response draft reuses the exact discipline from
+The optional Gemini response draft reuses the exact discipline from
 `investigator.py` (no ground truth in its input, must acknowledge any
 listed contradiction, cannot argue for a different recommendation, falls
-back to a deterministic template on any failure) -- verified with the same
-kind of mock-client test (well-formed response passes through, a raised
-exception falls back). No `ANTHROPIC_API_KEY` is configured anywhere in
-this repo, so every draft currently on disk is the fallback template, not
-LLM prose -- same honestly-exercised failure path as the investigator.
+back to a deterministic template on any failure). Verified live against
+all 172 cases with a real `GEMINI_API_KEY` -- at the free tier's 15
+requests/minute limit that's ~12 minutes of preemptive pacing (4.2s
+between calls), a one-time pipeline cost, not something anyone waits
+through live. `.env` holding the key is gitignored, so a fresh clone still
+runs entirely on the deterministic fallback by default, same as the
+investigator.
 
 Not built: an actual submission channel to a card network -- this
 produces a recommendation and a draft, not an API call that contests a

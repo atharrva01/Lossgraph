@@ -89,3 +89,6 @@ data/output_full/
 experiments/
 results/
 artifacts/
+
+# Claude Code session state (not project content)
+.claude/

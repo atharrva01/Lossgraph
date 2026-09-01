@@ -23,8 +23,9 @@ networkx==3.2
 # SHAP for explainability
 shap==0.43.0
 
-# LLM Integration (AI Investigator, ml/investigator.py)
-anthropic==1.2.0
+# LLM Integration (AI Investigator + Chargeback Responder drafts --
+# ml/investigator.py, ml/chargeback_responder.py)
+google-genai==2.21.0
 
 # Testing
 pytest==7.4.3

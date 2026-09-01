@@ -16,7 +16,7 @@
 - [x] Risk Event Detection Algorithm (fusion of the three) -- `ml/loss_events.py`
 
 ## Phase 3: Analysis & Explanation
-- [x] LLM Integration Layer (Claude Opus 5, evidence-grounded, citation-checked, deterministic fallback) -- `ml/investigator.py`
+- [x] LLM Integration Layer (Gemini, evidence-grounded, citation-checked, deterministic fallback) -- `ml/investigator.py`
 - [x] Evidence Chain Generation -- `ml/loss_events.py` (evidence IDs E1, E2... per event)
 - [x] Counterfactual Simulation Engine -- `ml/counterfactual.py`
 - [x] Action Optimizer (argmax net economic benefit over 6 candidate actions) -- `ml/counterfactual.py`
@@ -108,15 +108,14 @@ comparison. Verified end-to-end in a real browser.
 pitch video script, repo cleanup.
 
 **Day 6 (stretch, buffer time before the Sep 5 deadline)** -- AI
-Investigator (`ml/investigator.py`): Claude Opus 5 turns each Loss Event's
+Investigator (`ml/investigator.py`): an LLM turns each Loss Event's
 evidence chain into a plain-English narrative (primary hypothesis,
 supporting/contradicting evidence, unknowns, confidence commentary),
 system-prompted to cite an evidence ID for every claim and never propose an
 action other than the one the counterfactual simulator already picked.
 Every generated narrative is checked post-hoc for citations before being
-accepted. Falls back to a deterministic evidence-chain template -- verified
-working, since this repo has no API key configured -- exactly the section
-43 "LLM unavailable" failure path, not a hypothetical.
+accepted. Falls back to a deterministic evidence-chain template -- the
+section 43 "LLM unavailable" failure path.
 
 **Day 7 (stretch)** -- Chargeback Responder (`ml/chargeback_responder.py`):
 evidence checklist scoped to what a reason code actually requires,
@@ -129,6 +128,34 @@ exists (51 of the 74 ACCEPT cases trace to a single `chargeback_wave`
 event), and each incident page shows every chargeback that traces back to
 it -- the dispute-to-detection connection the product spec's demo script
 describes, working end to end rather than narrated.
+
+**Day 8 (stretch)** -- Switched the LLM provider from Claude Opus 5 to
+Gemini (free tier, no credit card) after weighing the actual cost of the
+Claude path against just not needing to pay for a hackathon demo -- the
+product spec never asks for a specific model, only "any reliable
+structured-output model" (section 38), so this is a config change to the
+grounding discipline, not a redesign of it. Verified the live LLM path
+end to end with a real key (not just mocked, unlike the Day 6/7 build):
+- `gemini-3.6-flash`'s free tier is capped at 20 requests/*day* --
+  unusable for 189 calls. `gemini-2.5-flash`/`-flash-lite` are retired for
+  new API keys. Landed on `gemini-3.5-flash-lite`, whose free tier is
+  15 requests/*minute* -- workable with pacing.
+- The first live run silently produced malformed JSON on the flagship
+  model: `finish_reason=MAX_TOKENS` because a reasoning-heavy model spends
+  most of its token budget on internal thinking before writing the answer
+  (1,917 of a 2,000-token budget on one call). Fixed by switching to the
+  non-reasoning `-lite` model and raising the budget as a safety margin,
+  not by suppressing the symptom.
+- Added preemptive pacing (4.2s between calls) instead of reactive
+  retry-after-429 -- simpler and avoids wasting the "did the grounding
+  check actually fail" fallback path on requests that just needed to
+  wait.
+
+The `.env` holding the real key is gitignored -- a fresh clone of this
+repo has no key configured anywhere, so it genuinely exercises the
+deterministic fallback path by default, exactly as documented. This run
+was the first time the LLM path was verified against a real API rather
+than a mocked client.
 
 ---
 

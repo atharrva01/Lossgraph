@@ -21,6 +21,7 @@ a failed/ungrounded response falls back to a template).
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -29,9 +30,10 @@ from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "output"
+ROOT_DIR = Path(__file__).resolve().parents[1]
+DATA_DIR = ROOT_DIR / "data" / "output"
 ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
-MODEL = "claude-opus-5"
+MODEL = "gemini-3.5-flash-lite"  # 3.6-flash's free-tier quota is 20 req/day -- far too low for 189 calls
 
 # Which evidence a reason code actually requires -- not every case needs
 # every document type, matching PRD section 18's "evidence requirements
@@ -54,7 +56,21 @@ STRICT RULES, no exceptions:
 3. Do not change the recommendation. If the input says ACCEPT or ESCALATE, do not draft text arguing to CONTEST.
 4. Keep the response text professional, factual, and short (this goes to a card network or the merchant's own case file, not a customer).
 5. If evidence is thin, say so plainly in the response rather than padding it with confident-sounding language.
+6. All amounts in the input are Indian Rupees. Write them as "Rs X" or "₹X", never "$X".
 """
+
+
+def _load_dotenv(path: Path = ROOT_DIR / ".env") -> None:
+    """Tiny manual .env loader -- avoids a new dependency for one file. An
+    already-exported env var always wins (setdefault)."""
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
 
 
 class ChargebackDraft(BaseModel):
@@ -99,14 +115,22 @@ def _llm_input(case: dict) -> dict:
 
 def draft_response(client, case: dict) -> dict:
     try:
-        response = client.messages.parse(
-            model=MODEL, max_tokens=1500, system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Draft the response for this case:\n\n{json.dumps(_llm_input(case), indent=2, default=str)}"}],
-            output_format=ChargebackDraft,
+        from google.genai import types
+
+        response = client.models.generate_content(
+            model=MODEL,
+            contents=f"Draft the response for this case:\n\n{json.dumps(_llm_input(case), indent=2, default=str)}",
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                response_schema=ChargebackDraft,
+                max_output_tokens=2500,
+            ),
         )
-        draft = response.parsed_output
+        draft = response.parsed
         if draft is None:
-            raise ValueError("no parsed output")
+            finish_reason = response.candidates[0].finish_reason if response.candidates else "unknown"
+            raise ValueError(f"no parsed output (finish_reason={finish_reason} -- likely truncated before valid JSON closed)")
         result = draft.model_dump()
         result["_source"] = "llm"
         return result
@@ -300,19 +324,31 @@ def run(out_path: Path) -> list:
     # customer's full train/val/test record (see build_cases).
     cases = build_cases(transactions, customers, loss_events, fused_scores, scope_split="test")
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    _load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
     client = None
     if api_key:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
+        from google import genai
+        client = genai.Client(api_key=api_key)
 
     llm_count, fallback_count = 0, 0
-    for case in cases:
-        case["draft"] = draft_response(client, case) if client is not None else _fallback_draft(case)
+    for i, case in enumerate(cases):
+        if client is not None:
+            # Free-tier quota is 15 requests/minute for this model -- pace
+            # preemptively rather than reactively retrying every 429. At
+            # 172 cases this takes ~12 minutes; that's a one-time pipeline
+            # cost, not something anyone waits through live.
+            if i > 0:
+                time.sleep(4.2)
+            case["draft"] = draft_response(client, case)
+        else:
+            case["draft"] = _fallback_draft(case)
         if case["draft"]["_source"] == "llm":
             llm_count += 1
         else:
             fallback_count += 1
+        if client is not None and (i + 1) % 20 == 0:
+            print(f"  ...{i + 1}/{len(cases)} cases processed ({llm_count} llm, {fallback_count} fallback so far)")
 
     with open(out_path, "w") as f:
         json.dump(cases, f, indent=2, default=str)

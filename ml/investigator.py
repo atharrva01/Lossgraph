@@ -14,6 +14,11 @@ deployment doesn't have it; leaking it here would let the model parrot the
 answer instead of reasoning from evidence, which would defeat the entire
 point of testing whether the narrative stays grounded.
 
+Uses Gemini (Google's genai SDK) rather than a fixed provider -- the
+product spec (section 38) only ever asks for "any reliable structured-
+output model" for this layer, never a specific one. The grounding
+discipline above doesn't care which model sits behind it.
+
 Failure handling (PRD section 43): if the API is unreachable, unconfigured,
 or returns something that fails validation, this falls back to a
 deterministic template built from the same evidence -- the pipeline never
@@ -24,6 +29,7 @@ citizen: it's evidence-complete, just not prose-varied.
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -32,7 +38,8 @@ from pydantic import BaseModel, Field
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
-MODEL = "claude-opus-5"
+ROOT_DIR = Path(__file__).resolve().parents[1]
+MODEL = "gemini-3.5-flash-lite"  # 3.6-flash's free-tier quota is 20 req/day -- far too low for 189 calls
 
 SYSTEM_PROMPT = """You are a fraud/risk investigation assistant writing up a case file for a human analyst at a payments company.
 
@@ -44,7 +51,21 @@ STRICT RULES, no exceptions:
 3. Do not independently decide whether this is fraud. Report what the evidence shows and how confident the system already is (the `confidence` field) -- do not assign your own confidence.
 4. The `recommended_next_step` must describe and justify the action already given to you in the input's `recommended_action` field. Do not propose a different action. If the evidence seems weak for that action, say so honestly in `unknowns`, not by silently recommending something else.
 5. If the evidence is sparse, mixed, or low-confidence, say that plainly. A short, honest write-up beats a padded confident-sounding one.
+6. All amounts in the input are Indian Rupees. Write them as "Rs X" or "₹X", never "$X".
 """
+
+
+def _load_dotenv(path: Path = ROOT_DIR / ".env") -> None:
+    """Tiny manual .env loader -- avoids a new dependency for one file. An
+    already-exported env var always wins (setdefault)."""
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
 
 
 class InvestigationNarrative(BaseModel):
@@ -124,18 +145,23 @@ def investigate_event(client, event: dict) -> dict:
     valid_ids = {e["id"] for e in event["evidence"]}
 
     try:
-        response = client.messages.parse(
+        from google.genai import types
+
+        response = client.models.generate_content(
             model=MODEL,
-            max_tokens=2000,
-            system=SYSTEM_PROMPT,
-            messages=[{
-                "role": "user",
-                "content": f"Investigate this Loss Event:\n\n{json.dumps(payload, indent=2, default=str)}",
-            }],
-            output_format=InvestigationNarrative,
+            contents=f"Investigate this Loss Event:\n\n{json.dumps(payload, indent=2, default=str)}",
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                response_schema=InvestigationNarrative,
+                max_output_tokens=3000,
+            ),
         )
-        narrative = response.parsed_output
-        if narrative is None or not _citations_present(narrative, valid_ids):
+        narrative = response.parsed
+        if narrative is None:
+            finish_reason = response.candidates[0].finish_reason if response.candidates else "unknown"
+            raise ValueError(f"no parsed output (finish_reason={finish_reason} -- likely truncated before valid JSON closed)")
+        if not _citations_present(narrative, valid_ids):
             raise ValueError("model output failed grounding check (missing evidence citations)")
         result = narrative.model_dump()
         result["_source"] = "llm"
@@ -150,21 +176,26 @@ def run(events_path: Path) -> list:
     with open(events_path) as f:
         events = json.load(f)
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    _load_dotenv()
+    api_key = os.environ.get("GEMINI_API_KEY")
     client = None
     if api_key:
         try:
-            import anthropic
-            client = anthropic.Anthropic(api_key=api_key)
+            from google import genai
+            client = genai.Client(api_key=api_key)
         except ImportError:
-            print("  anthropic package not installed -- falling back to deterministic narratives for all events")
+            print("  google-genai package not installed -- falling back to deterministic narratives for all events")
     else:
-        print("  ANTHROPIC_API_KEY not set -- falling back to deterministic narratives for all events "
+        print("  GEMINI_API_KEY not set -- falling back to deterministic narratives for all events "
               "(this is the section-43 'LLM unavailable' failure path, not an error)")
 
     llm_count, fallback_count = 0, 0
-    for event in events:
+    for i, event in enumerate(events):
         if client is not None:
+            # Free-tier quota is 15 requests/minute for this model -- pace
+            # preemptively rather than reactively retrying every 429.
+            if i > 0:
+                time.sleep(4.2)
             event["investigation"] = investigate_event(client, event)
         else:
             event["investigation"] = _fallback_narrative(event)

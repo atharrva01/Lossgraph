@@ -49,8 +49,8 @@ data/generation/                          ml/
                                                          │
                                               ┌──────────▼──────────┐
                                               │ investigator.py      │
-                                              │ Claude Opus 5 case-  │
-                                              │ file narrative,      │
+                                              │ Gemini case-file     │
+                                              │ narrative,           │
                                               │ citation-checked,    │
                                               │ deterministic fallback│
                                               └──────────┬──────────┘
@@ -126,11 +126,20 @@ believe this?" trust requirement.
 
 ## AI Investigator
 
-`investigator.py` calls Claude Opus 5 to turn the evidence chain into a
+`investigator.py` calls Gemini to turn the evidence chain into a
 plain-English case-file narrative (incident summary, primary hypothesis,
 supporting/contradicting evidence, unknowns, confidence commentary). It
 investigates evidence; it does not detect anything itself and cannot
-override the deterministic recommendation:
+override the deterministic recommendation.
+
+**Why Gemini, not a fixed provider.** The product spec (section 38) only
+ever asks for "any reliable structured-output model" for this layer --
+this was originally built against Claude Opus 5, then switched to
+Gemini's free tier once the actual per-call cost of the alternative wasn't
+worth paying for a hackathon demo. The grounding discipline below doesn't
+change with the provider; only the SDK call does (`google-genai`'s
+`response_schema=` instead of `client.messages.parse()`'s
+`output_format=`).
 
 - **Input is restricted by construction.** The model receives the evidence
   chain, confidence, exposure, and the already-computed `recommended_action`
@@ -138,21 +147,29 @@ override the deterministic recommendation:
   including it here would let the model parrot the answer instead of
   reasoning from evidence, defeating the point of testing whether the
   narrative stays grounded.
-- **Structured output, not free text.** `client.messages.parse()` with a
-  Pydantic schema (`InvestigationNarrative`) guarantees a typed response;
-  the system prompt requires every claim in `supporting_evidence` /
-  `contradicting_evidence` to cite an evidence ID in parentheses.
+- **Structured output, not free text.** `response_schema=InvestigationNarrative`
+  (a Pydantic model) guarantees a typed response; the system prompt
+  requires every claim in `supporting_evidence` / `contradicting_evidence`
+  to cite an evidence ID in parentheses.
 - **Grounding is checked, not just requested.** After parsing, every
   citation is verified to reference a real evidence ID from the input
   (`_citations_present`); a response that fails this check is treated as a
   failure and falls through to the same path as an API error.
-- **Failure handling is real, not simulated.** No `ANTHROPIC_API_KEY` is
-  configured anywhere in this repo or its environment, so every narrative
-  currently on disk was produced by the deterministic fallback --
-  evidence-complete, clearly labelled `deterministic_fallback` in the data
-  and in the dashboard's "AI Investigation" panel, generated with zero API
-  calls. This is section 43's "LLM unavailable" failure path exercised for
-  real, not asserted.
+- **Both the failure path and the success path are verified for real, not
+  simulated.** No `GEMINI_API_KEY` is committed anywhere in this repo (the
+  working `.env` used during development is gitignored), so a fresh clone
+  produces every narrative via the deterministic fallback by default --
+  section 43's "LLM unavailable" path, exercised for real. Separately,
+  the live LLM path was also verified end to end against the real API,
+  which is how two real bugs got caught before shipping: the first
+  candidate model's free tier allowed only 20 requests/*day* (unusable
+  for 189 calls across both LLM features), and the first live response
+  came back truncated (`finish_reason=MAX_TOKENS`) because a
+  reasoning-heavy model spent nearly its whole token budget on internal
+  thinking before writing the answer. Fixed by choosing a non-reasoning
+  `-lite` model, raising the output budget, and pacing calls to stay
+  under the (more workable) 15-requests/minute free-tier limit -- see
+  `ROADMAP.md`'s Day 8 entry for the full account.
 
 ## Counterfactual Simulator + Action Optimizer
 
@@ -195,13 +212,16 @@ event's own drill-down, as a "Linked Chargebacks" list) -- the "this
 dispute is connected to Loss Event #871" moment from the product spec,
 working end to end rather than narrated over a mockup.
 
-An optional Claude Opus 5 call drafts the response prose from an
-already-decided case file, with the same discipline as the AI Investigator
-above: no ground truth in its input, must acknowledge any listed
-contradiction, cannot argue for a different recommendation than the one
-already chosen, and falls back to a deterministic template on any failure
--- exercised for real in this repo, same as the investigator, since no
-API key is configured anywhere in this environment.
+An optional Gemini call drafts the response prose from an already-decided
+case file, with the same discipline as the AI Investigator above: no
+ground truth in its input, must acknowledge any listed contradiction,
+cannot argue for a different recommendation than the one already chosen,
+and falls back to a deterministic template on any failure. Verified live
+against all 172 cases with a real key -- at the free tier's pace (4.2s
+between calls, to stay under 15 requests/minute) that's ~12 minutes, a
+one-time pipeline cost. The committed repo ships with no key (`.env` is
+gitignored), so a fresh clone runs entirely on the fallback by default,
+same as the investigator.
 
 ## Backend and frontend
 
