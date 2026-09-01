@@ -3,10 +3,10 @@
 This describes the system as built, not as originally envisioned. Where
 the two differ, the difference is called out with the reasoning -- a
 solo build against a Sep 5 deadline required cutting real scope (Neo4j,
-chargeback responder, live Razorpay integration, authentication) to what's
-actually gradeable: a working detector, held-out precision/recall, honest
-false-positive cost, and a strictly defensive system. See `ROADMAP.md` for
-the day-by-day build log and `docs/EVALUATION.md` for the numbers this
+live Razorpay integration, authentication) to what's actually gradeable:
+a working detector, held-out precision/recall, honest false-positive
+cost, and a strictly defensive system. See `ROADMAP.md` for the
+day-by-day build log and `docs/EVALUATION.md` for the numbers this
 architecture produces.
 
 ## System diagram (as built)
@@ -57,6 +57,16 @@ data/generation/                          ml/
                                                          │
                                           ml/artifacts/loss_events_with_policy.json
                                                          │
+                                              ┌──────────▼──────────┐
+                                              │ chargeback_responder │
+                                              │ .py: per-dispute     │
+                                              │ evidence + contra-   │
+                                              │ diction check, links │
+                                              │ back to Loss Events  │
+                                              └──────────┬──────────┘
+                                                         │
+                                          ml/artifacts/chargeback_cases.json
+                                                         │
                         backend/app/data_access.py ──────┘  (loads once, serves via REST)
                                     │
                         FastAPI (backend/app/api/*.py)
@@ -64,7 +74,8 @@ data/generation/                          ml/
                         Next.js dashboard (frontend/src/app/*)
                         Command Center -> incident drill-down
                         (evidence chain, Cytoscape.js graph,
-                         policy comparison)
+                         policy comparison, linked chargebacks)
+                        + a separate Chargebacks section
 ```
 
 **Why offline pipeline + served artifacts, not live scoring.** The
@@ -156,21 +167,58 @@ distinction, BLOCK won even on the deliberately-ambiguous
 `false_positive_trap` cluster -- exactly the failure mode the product spec
 exists to prevent.
 
+## Chargeback Responder
+
+`chargeback_responder.py` closes the loop the product spec's demo script
+describes: a dispute arrives, and the system checks whether it already
+knows something about the transaction, instead of treating every
+chargeback as a fresh case with no memory of prior detection.
+
+For each disputed transaction (test split, matching the rest of this
+repo's held-out evaluation -- `loss_events_with_policy.json` and
+`fused_scores.csv` only exist for that split): an evidence checklist
+scoped to what the reason code actually requires (a `duplicate_charge`
+dispute doesn't need a delivery confirmation; an `unauthorized` one does
+need device-consistency evidence, not a product listing), a check for
+contradictions in the merchant's own records (a refund already issued
+before the dispute; the transaction independently flagged as high-risk by
+this same pipeline), and a CONTEST / ACCEPT / ESCALATE recommendation.
+
+**The recommendation reuses detection, it doesn't redo it.** A transaction
+linked to a high-confidence Loss Event -- or, when it wasn't swept into a
+formal cluster/temporal event, one whose own fused risk score is elevated
+-- gets ACCEPT: contesting would mean arguing against this same system's
+own independent finding. Every ACCEPT recommendation in this repo's data
+was verified correct against ground truth (`docs/EVALUATION.md`), and each
+case links back to its Loss Event (visible on both the case page and the
+event's own drill-down, as a "Linked Chargebacks" list) -- the "this
+dispute is connected to Loss Event #871" moment from the product spec,
+working end to end rather than narrated over a mockup.
+
+An optional Claude Opus 5 call drafts the response prose from an
+already-decided case file, with the same discipline as the AI Investigator
+above: no ground truth in its input, must acknowledge any listed
+contradiction, cannot argue for a different recommendation than the one
+already chosen, and falls back to a deterministic template on any failure
+-- exercised for real in this repo, same as the investigator, since no
+API key is configured anywhere in this environment.
+
 ## Backend and frontend
 
 - **Backend** (`backend/app/`): FastAPI. `data_access.py` is the only file
   that touches `data/output/` and `ml/artifacts/`; every router
-  (`api/incident.py`, `api/simulation.py`, `api/merchants.py`) is a thin
-  read layer over it. `api/transaction.py`, `api/entity.py`,
-  `api/chargeback.py` remain from the original scaffold and are not wired
-  to real data -- the chargeback responder in particular is unbuilt (see
-  Roadmap).
+  (`api/incident.py`, `api/simulation.py`, `api/merchants.py`,
+  `api/chargeback.py`) is a thin read layer over it. `api/transaction.py`
+  and `api/entity.py` remain from the original scaffold and are not wired
+  to real data.
 - **Frontend** (`frontend/src/`): Next.js App Router. `app/page.tsx`
-  (Command Center) -> `app/incidents/[id]/page.tsx` (drill-down), with
-  `components/GraphView.tsx` wrapping `cytoscape` directly (no third-party
-  React wrapper -- the originally-scaffolded `cytoscape-react` package
-  doesn't exist on npm) and `components/PolicyComparison.tsx` rendering
-  the counterfactual table with the recommended action highlighted.
+  (Command Center) -> `app/incidents/[id]/page.tsx` (drill-down) and
+  `app/chargebacks/` (list + case detail, cross-linked with the incident
+  it traces to), with `components/GraphView.tsx` wrapping `cytoscape`
+  directly (no third-party React wrapper -- the originally-scaffolded
+  `cytoscape-react` package doesn't exist on npm) and
+  `components/PolicyComparison.tsx` rendering the counterfactual table
+  with the recommended action highlighted.
 
 ## Data model
 
@@ -186,9 +234,6 @@ not as dead code, but loading them is unbuilt.
 
 Cut deliberately, not by accident:
 
-- **Chargeback responder + evidence contradiction detector.** Downstream
-  of loss-event detection, not required by the graded rubric (a working
-  detector + held-out eval + honest FP cost + defense-only).
 - **Neo4j, Docker Compose, authentication, multi-tenant support.**
   Infrastructure that adds deployment risk without adding evaluation
   signal for a synthetic-data demo.

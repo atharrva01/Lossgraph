@@ -9,9 +9,10 @@
 
 This is the step that matters: it generates the synthetic merchant
 ecosystem and runs all three engines, fusion, loss-event detection,
-counterfactual simulation, and the AI investigator. The backend serves
-this output rather than recomputing it, so it must run first (and again
-any time you change anything under `data/generation/` or `ml/`).
+counterfactual simulation, the AI investigator, and the chargeback
+responder. The backend serves this output rather than recomputing it, so
+it must run first (and again any time you change anything under
+`data/generation/` or `ml/`).
 
 ```bash
 pip install -r backend/requirements.txt
@@ -24,10 +25,11 @@ Prints a summary as it goes; `ml/README.md` and `docs/EVALUATION.md`
 explain what the numbers mean.
 
 Optionally, `export ANTHROPIC_API_KEY=sk-ant-...` first for real
-Claude-generated investigation narratives -- without it, the pipeline
-automatically falls back to deterministic evidence-chain summaries (no
-error, this is intended behavior, see `docs/ARCHITECTURE.md`'s AI
-Investigator section).
+Claude-generated investigation narratives and chargeback response drafts
+-- without it, the pipeline automatically falls back to deterministic
+templates (no error, this is intended behavior, see
+`docs/ARCHITECTURE.md`'s AI Investigator and Chargeback Responder
+sections).
 
 ## 2. Start the backend
 
@@ -65,6 +67,11 @@ say why (usually: the pipeline hasn't been run, or the backend isn't up).
 - A **ground-truth panel** at the bottom of each incident, clearly labelled
   as evaluation-only, showing how much of what was flagged is genuinely
   the injected scenario vs. a legitimate look-alike.
+- A **Chargebacks** tab: every disputed transaction with its evidence
+  checklist, contradiction flags, and a CONTEST/ACCEPT/ESCALATE
+  recommendation. Cases tied to a Loss Event link to it, and that event's
+  own page lists every chargeback that traces back to it -- the
+  detection-to-dispute connection the product's demo script describes.
 
 ## Troubleshooting
 

@@ -128,6 +128,36 @@ export default function IncidentDetailPage() {
         </section>
       </div>
 
+      {incident.linked_chargebacks.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-bold text-gray-900 mb-3">
+            Linked Chargebacks ({incident.linked_chargebacks.length})
+          </h2>
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <p className="text-sm text-gray-600 mb-3">
+              These disputes trace back to this Loss Event -- detected independently, before any of them arrived.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {incident.linked_chargebacks.slice(0, 30).map((cb) => (
+                <Link
+                  key={cb.case_id}
+                  href={`/chargebacks/${cb.case_id}`}
+                  className="text-xs font-medium px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100"
+                >
+                  {cb.case_id}
+                </Link>
+              ))}
+              {incident.linked_chargebacks.length > 30 && (
+                <span className="text-xs text-gray-400 self-center">
+                  +{incident.linked_chargebacks.length - 30} more --{' '}
+                  <Link href="/chargebacks" className="underline">view all</Link>
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="mb-8">
         <h2 className="text-lg font-bold text-gray-900 mb-3">Simulate Intervention</h2>
         <div className="bg-white border border-gray-200 rounded-lg p-4">

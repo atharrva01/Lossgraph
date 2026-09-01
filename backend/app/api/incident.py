@@ -10,8 +10,8 @@ querying a live DB.
 from fastapi import APIRouter, HTTPException, Query
 
 from app.data_access import (
-    PipelineNotRunError, command_center_summary, get_event, graph_for_event,
-    load_events, merchant_name,
+    PipelineNotRunError, chargeback_cases_for_event, command_center_summary,
+    get_event, graph_for_event, load_events, merchant_name,
 )
 
 router = APIRouter()
@@ -64,7 +64,12 @@ async def get_incident_details(event_id: str):
     if event is None:
         raise HTTPException(status_code=404, detail="Incident not found")
 
-    return {**event, "merchant_name": merchant_name(event["merchant_id"])}
+    linked_chargebacks = [
+        {"case_id": c["case_id"], "reason_code": c["reason_code"], "recommendation": c["recommendation"],
+         "amount": c["amount"]}
+        for c in chargeback_cases_for_event(event_id)
+    ]
+    return {**event, "merchant_name": merchant_name(event["merchant_id"]), "linked_chargebacks": linked_chargebacks}
 
 
 @router.get("/{event_id}/graph")

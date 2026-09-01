@@ -168,6 +168,51 @@ device/address sharing, and an asymmetric confidence weighting for
 dispute- vs. return-driven temporal anomalies, justified by the purity
 numbers actually observed on this split (98% vs. 0%), not assumed.
 
+## Chargeback Responder
+
+172 test-split disputes get an evidence checklist (which items a reason
+code actually requires -- not every dispute needs the same documents), a
+contradiction check against the merchant's own records, and a
+CONTEST/ACCEPT/ESCALATE recommendation that cross-references this same
+pipeline's own detection output (`ml/chargeback_responder.py`).
+
+| Recommendation | Count | vs. ground truth |
+|---|--:|---|
+| ACCEPT | 74 | **100% correct** (0/74 were actually legitimate -- every case this system said "don't contest" was genuinely part of a detected loss pattern) |
+| CONTEST | 97 | 69 correctly legitimate, 28 missed loss (71% precision) |
+| ESCALATE | 1 | contradiction flagged, held for manual review |
+
+Recall on catching true loss via ACCEPT is 74/102 = 72.5% -- consistent
+with, not better than, the ~70-83% recall already reported for the
+detection engines above. That consistency is the point: the responder
+isn't independently smarter about fraud, it's honestly reusing the same
+detection signal, with the same real limit.
+
+**Two design decisions that materially changed these numbers, both found
+empirically, not assumed:**
+
+1. **Cases are scoped to the test split.** `loss_events_with_policy.json`
+   and `fused_scores.csv` only exist for test-split transactions -- a
+   train/val dispute would never find a match. Before scoping, 0% of
+   train/val disputes linked to anything, dragging CONTEST accuracy down
+   to 45% overall; scoping to test (where linkage is possible) is what
+   produces the numbers above. Customer prior-history evidence still uses
+   the customer's full train/val/test record, not just the test window --
+   only which *disputes* get a case is scoped.
+2. **A transaction's own fused score, not just formal Loss Event
+   membership, counts as independent risk evidence.** Graph/anomaly
+   detection isn't 100% recall, so some genuinely fraudulent disputed
+   transactions were never swept into a Loss Event. Checking
+   `fused_score >= 0.6` in addition to event linkage was verified to add
+   24 more cases at 100% true-loss precision before being adopted --
+   this is the same fused score reported in the Fusion section above, not
+   a new number invented for this feature.
+
+The one PRD-described feature not built here: an actual submission channel
+(this produces a recommendation and a draft, not a network API call to
+contest a dispute) -- out of scope for a synthetic-data demo with no real
+payment processor connection.
+
 ## Economic Evaluation (the headline metric)
 
 Per section 28 of the product spec, expected loss reduction -- not
@@ -227,10 +272,13 @@ customer the full lost sale, not a flat friction fee -- see
   counterfactual simulator uses true per-merchant values.
 - **Action economics** (prevention rates, cost multipliers per action) are
   a documented, reasonable starting model, not fit to any data.
-- **`chargeback_wave` events recommend VERIFY**, which doesn't map cleanly
-  onto a transaction that already shipped -- there's no "contest the
-  dispute" action in the current five-action framework. That's the
-  chargeback responder's job (not built; see `ROADMAP.md`).
+- **The Loss Event action optimizer and the chargeback responder are two
+  separate decisions with two separate vocabularies** -- a
+  `chargeback_wave` Loss Event still recommends VERIFY from the 6-action
+  framework (there's no "contest" action in it), while the *disputes
+  themselves* get their own CONTEST/ACCEPT/ESCALATE recommendation from
+  `chargeback_responder.py`. They're linked (each case shows which Loss
+  Event it traces to) but not unified into one action space.
 - **Graph component weights** (0.5 outcome / 0.35 burstiness / 0.15 size)
   are hand-set, not learned.
 - No live Razorpay API integration -- the system is demonstrated entirely

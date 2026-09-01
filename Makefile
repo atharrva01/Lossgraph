@@ -181,12 +181,12 @@ generate-data:
 	@echo "✓ Data generation complete"
 
 # Full offline intelligence pipeline: synthetic data -> three engines ->
-# fusion -> loss events -> counterfactual simulation -> LLM investigator.
-# Run this before starting the backend -- it serves these precomputed
-# artifacts, it does not recompute them per request (see
+# fusion -> loss events -> counterfactual simulation -> LLM investigator ->
+# chargeback responder. Run this before starting the backend -- it serves
+# these precomputed artifacts, it does not recompute them per request (see
 # backend/app/data_access.py). Set ANTHROPIC_API_KEY for real LLM
-# narratives; without it, the investigator step falls back to deterministic
-# evidence summaries automatically (PRD section 43 failure handling).
+# narratives/drafts; without it, both LLM steps fall back to deterministic
+# templates automatically (PRD section 43 failure handling).
 pipeline: generate-data
 	@echo "🧠 Running intelligence pipeline..."
 	@python3 -m ml.risk_model
@@ -196,6 +196,7 @@ pipeline: generate-data
 	@python3 -m ml.loss_events
 	@python3 -m ml.counterfactual
 	@python3 -m ml.investigator
+	@python3 -m ml.chargeback_responder
 	@echo "✓ Pipeline complete -- ml/artifacts/loss_events_with_policy.json ready"
 
 # Build production images

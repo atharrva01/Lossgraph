@@ -67,6 +67,13 @@ export interface Investigation {
   _fallback_reason?: string
 }
 
+export interface LinkedChargeback {
+  case_id: string
+  reason_code: string
+  recommendation: string
+  amount: number
+}
+
 export interface IncidentDetail extends IncidentSummary {
   gross_amount_at_risk: number
   affected_entity_count: number
@@ -75,6 +82,62 @@ export interface IncidentDetail extends IncidentSummary {
   ground_truth: GroundTruth
   counterfactual: Counterfactual
   investigation?: Investigation
+  linked_chargebacks: LinkedChargeback[]
+}
+
+export interface ChargebackEvidenceItem {
+  type: string
+  status: 'present' | 'missing'
+  detail: string
+}
+
+export interface Contradiction {
+  type: string
+  description: string
+}
+
+export interface ChargebackDraft {
+  case_summary: string
+  response_text: string
+  evidence_notes: string[]
+  caveats: string[]
+  _source: 'llm' | 'deterministic_fallback'
+  _fallback_reason?: string
+}
+
+export interface ChargebackCaseSummary {
+  case_id: string
+  transaction_id: string
+  merchant_id: string
+  merchant_name: string
+  amount: number
+  reason_code: string
+  disputed_at: string
+  recommendation: string
+  evidence_completeness: number
+  has_contradictions: boolean
+  linked_loss_event: { event_id: string; event_type: string; confidence: number } | null
+}
+
+export interface ChargebackListResponse {
+  total_cases: number
+  recommendation_counts: Record<string, number>
+  cases: ChargebackCaseSummary[]
+}
+
+export interface ChargebackCaseDetail extends ChargebackCaseSummary {
+  customer_id: string
+  order_timestamp: string
+  evidence: ChargebackEvidenceItem[]
+  contradictions: Contradiction[]
+  recommendation_reasoning: string
+  transaction_fused_score: number
+  customer_context: {
+    prior_transaction_count: number
+    prior_successful_deliveries: number
+    is_established: boolean
+  }
+  draft: ChargebackDraft
 }
 
 export interface GraphNode {

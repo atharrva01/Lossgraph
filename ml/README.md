@@ -213,7 +213,52 @@ matter more than the prose quality:
    script. Set `ANTHROPIC_API_KEY` before `make pipeline` to get real
    narratives instead; nothing else about the pipeline changes.
 
-Not built: the chargeback responder (PRD section 18), which is why
-`chargeback_wave` events still get a VERIFY recommendation that doesn't
-really fit a transaction that already shipped -- there's no "contest the
-dispute" action in the current five-action framework.
+## Chargeback Responder (`chargeback_responder.py`)
+
+```bash
+python3 -m ml.chargeback_responder
+```
+
+172 test-split disputes, each getting a reason-code-scoped evidence
+checklist, a contradiction check, and a CONTEST/ACCEPT/ESCALATE
+recommendation. Building this surfaced two real issues, both fixed and
+both worth knowing about:
+
+1. **Split scoping.** `loss_events_with_policy.json` and
+   `fused_scores.csv` only exist for test-split transactions. Before
+   restricting *which disputes get a case* to the test split, 0% of
+   train/val disputes could ever link to a Loss Event, which silently
+   tanked overall CONTEST accuracy to ~45%. Prior-history evidence
+   (`customer_context`) still reads the customer's full train/val/test
+   record -- only case selection is scoped, not the history lookups a
+   case draws on.
+2. **Loss Event membership alone under-counts real risk.** Graph/anomaly
+   detection isn't 100% recall (see the Fusion/Loss Event sections above),
+   so some genuinely fraudulent disputed transactions were never swept
+   into a formal event. Adding "this transaction's own fused score is
+   >= 0.6" as an equally-valid independent-risk signal (not just formal
+   event membership) was checked empirically before being adopted -- it
+   added 24 more high-confidence cases at 100% true-loss precision.
+
+**Result:** 74 ACCEPT recommendations, verified 100% correct against
+ground truth (every one really was part of a detected loss pattern); 97
+CONTEST (71% precision -- 69 correctly legitimate, 28 missed loss,
+consistent with the detection engines' own ~70-83% recall, not better);
+1 ESCALATE. 51 of the ACCEPT cases trace to a single `chargeback_wave`
+Loss Event and are surfaced on both that event's page ("Linked
+Chargebacks") and each case's own page -- the dispute-to-detection link
+described in the product spec's demo script, real rather than staged.
+
+The optional Claude Opus 5 response draft reuses the exact discipline from
+`investigator.py` (no ground truth in its input, must acknowledge any
+listed contradiction, cannot argue for a different recommendation, falls
+back to a deterministic template on any failure) -- verified with the same
+kind of mock-client test (well-formed response passes through, a raised
+exception falls back). No `ANTHROPIC_API_KEY` is configured anywhere in
+this repo, so every draft currently on disk is the fallback template, not
+LLM prose -- same honestly-exercised failure path as the investigator.
+
+Not built: an actual submission channel to a card network -- this
+produces a recommendation and a draft, not an API call that contests a
+live dispute, which is out of scope without a real payment processor
+connection.

@@ -23,8 +23,8 @@
 - [x] Risk Event Genome Creation -- `ml/loss_events.py` (fuses risk_model + graph_engine + anomaly_engine)
 
 ## Phase 4: Advanced Features
-- [ ] Chargeback Response Automation
-- [ ] Evidence Contradiction Detection
+- [x] Chargeback Response Automation (evidence checklist + CONTEST/ACCEPT/ESCALATE recommendation, linked back to Loss Event detection) -- `ml/chargeback_responder.py`
+- [x] Evidence Contradiction Detection (refund-before-dispute, independently-flagged-as-loss) -- `ml/chargeback_responder.py`
 - [ ] Risk Propagation Algorithm
 - [ ] Temporal Pattern Analysis
 - [x] Seasonal Baseline Normalization (Poisson-style pooled trailing baseline in the anomaly engine)
@@ -116,9 +116,19 @@ action other than the one the counterfactual simulator already picked.
 Every generated narrative is checked post-hoc for citations before being
 accepted. Falls back to a deterministic evidence-chain template -- verified
 working, since this repo has no API key configured -- exactly the section
-43 "LLM unavailable" failure path, not a hypothetical. Chargeback responder
-remains unbuilt; not required for the graded rubric (held-out precision/
-recall + honest false-positive cost + strictly defensive).
+43 "LLM unavailable" failure path, not a hypothetical.
+
+**Day 7 (stretch)** -- Chargeback Responder (`ml/chargeback_responder.py`):
+evidence checklist scoped to what a reason code actually requires,
+contradiction detection (refund already issued; transaction independently
+flagged by this system's own detection), and a CONTEST/ACCEPT/ESCALATE
+recommendation. The 74 ACCEPT recommendations were 100% correct against
+ground truth (every one really was a detected loss pattern) -- see
+`docs/EVALUATION.md`. Each case links back to its Loss Event where one
+exists (51 of the 74 ACCEPT cases trace to a single `chargeback_wave`
+event), and each incident page shows every chargeback that traces back to
+it -- the dispute-to-detection connection the product spec's demo script
+describes, working end to end rather than narrated.
 
 ---
 

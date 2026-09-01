@@ -4,7 +4,7 @@
 
 import axios from 'axios'
 import type {
-  CommandCenterResponse, GraphData, IncidentDetail, Merchant,
+  ChargebackCaseDetail, ChargebackListResponse, CommandCenterResponse, GraphData, IncidentDetail, Merchant,
 } from './types'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -21,6 +21,13 @@ export const incidentApi = {
     apiClient.get<IncidentDetail>(`/risk/incidents/${eventId}`),
   getIncidentGraph: (eventId: string) =>
     apiClient.get<GraphData>(`/risk/incidents/${eventId}/graph`),
+}
+
+export const chargebackApi = {
+  list: (recommendation: string = 'ALL') =>
+    apiClient.get<ChargebackListResponse>('/risk/chargeback', { params: { recommendation } }),
+  getCase: (caseId: string) =>
+    apiClient.get<ChargebackCaseDetail>(`/risk/chargeback/${caseId}`),
 }
 
 export const merchantApi = {

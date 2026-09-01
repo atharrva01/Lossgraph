@@ -66,8 +66,22 @@ def load_customers() -> pd.DataFrame:
     return pd.read_csv(_require(DATA_DIR / "customers.csv"))
 
 
+@lru_cache(maxsize=1)
+def load_chargeback_cases() -> list:
+    with open(_require(ARTIFACT_DIR / "chargeback_cases.json")) as f:
+        return json.load(f)
+
+
 def get_event(event_id: str) -> dict | None:
     return next((e for e in load_events() if e["event_id"] == event_id), None)
+
+
+def get_chargeback_case(case_id: str) -> dict | None:
+    return next((c for c in load_chargeback_cases() if c["case_id"] == case_id), None)
+
+
+def chargeback_cases_for_event(event_id: str) -> list:
+    return [c for c in load_chargeback_cases() if c.get("linked_loss_event") and c["linked_loss_event"]["event_id"] == event_id]
 
 
 def merchant_name(merchant_id: str) -> str:

@@ -94,7 +94,7 @@ benefit. For the ambiguous cluster, the same optimizer picks Hold, not
 Block, because a wrongly-blocked legitimate order costs the full sale, not
 a flat fee. That distinction alone changed the recommendation."
 
-## 3:30-4:15 -- Why three engines, not one
+## 3:30-4:20 -- Why three engines, not one -- and the payoff
 
 **Do:** Click the `Chargeback Wave` event (RE-2026-00013, 51 transactions,
 100% confidence).
@@ -107,7 +107,18 @@ transaction-time risk model catches zero percent of these by construction
 watching the outcome stream catches it at all. That's why this system
 fuses three engines instead of building one better model."
 
-## 4:15-4:45 -- Honest numbers
+**Do:** Scroll to "Linked Chargebacks (50)" on this same event page. Click
+one of the case badges (e.g. CB-0001).
+
+**Say:** "And here's the actual chargeback responder. This dispute --
+which just came in -- is one of fifty that trace straight back to this
+one detected event, before any of them arrived. The system doesn't treat
+this as a fresh case: it says accept, don't contest, because it already
+independently flagged this transaction as high-risk. Every accept
+recommendation like this one checked out 100% correct against my
+held-out ground truth."
+
+## 4:20-4:50 -- Honest numbers
 
 **Say (over the evaluation doc, or narrate directly):** "On the held-out
 test split: the fused model gets 0.61 PR-AUC, beating any single engine.
@@ -118,13 +129,14 @@ aggressiveness of 4.7 out of 5 -- close to Block. Events that turn out to
 be false alarms average 0.7 -- close to Allow. That gap is the actual
 proof this isn't just pattern-matching to a synthetic dataset."
 
-## 4:45-5:00 -- Close
+## 4:50-5:15 -- Close
 
-**Say:** "Built solo in five days: a synthetic merchant ecosystem with ten
-injected scenarios, three independently-evaluated intelligence engines,
-risk fusion, a counterfactual policy simulator, and this dashboard, all
-running end to end. Repo link and full evaluation writeup in the
-description."
+**Say:** "Built solo: a synthetic merchant ecosystem with ten injected
+scenarios, three independently-evaluated intelligence engines, risk
+fusion, a counterfactual policy simulator, an AI investigator, and a
+chargeback responder that closes the loop back to detection -- all
+running end to end, not mocked. Repo link and full evaluation writeup in
+the description."
 
 **Screen:** Command Center, wide shot, hold for 3 seconds.
 
@@ -133,7 +145,8 @@ description."
 ## Cut list if running long
 
 Drop in this order: the merchant-filter demo (1:00), the second evidence
-item click-through (1:45), the closing repeat of the architecture list
-(4:45). Keep the ring-vs-trap comparison (2:30-3:30) and the
-chargeback-wave no-graph moment (3:30-4:15) no matter what -- those two
-are the actual differentiators.
+item click-through (1:45), the closing feature list (4:50). Keep the
+ring-vs-trap comparison (2:30-3:30) and the chargeback-wave -> linked
+dispute finale (3:30-4:20) no matter what -- those two are the actual
+differentiators, and the finale is the moment the product spec's own demo
+script calls "when the whole architecture clicks."

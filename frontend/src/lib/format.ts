@@ -29,6 +29,28 @@ export function confidenceColor(confidence: number): string {
   return 'bg-gray-400'
 }
 
+export const RECOMMENDATION_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  CONTEST: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Contest' },
+  ACCEPT: { bg: 'bg-red-100', text: 'text-red-800', label: 'Accept' },
+  ESCALATE: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Escalate' },
+}
+
+export function recommendationStyle(recommendation: string) {
+  return RECOMMENDATION_STYLES[recommendation] ?? { bg: 'bg-gray-100', text: 'text-gray-700', label: recommendation }
+}
+
+export const REASON_CODE_LABELS: Record<string, string> = {
+  non_receipt: 'Non-Receipt',
+  not_as_described: 'Not as Described',
+  quality_issue: 'Quality Issue',
+  unauthorized: 'Unauthorized',
+  duplicate_charge: 'Duplicate Charge',
+}
+
+export function reasonCodeLabel(code: string): string {
+  return REASON_CODE_LABELS[code] ?? code
+}
+
 export const EVENT_TYPE_LABELS: Record<string, string> = {
   coordinated_return_ring: 'Coordinated Return Ring',
   coordinated_abuse: 'Coordinated Abuse',
