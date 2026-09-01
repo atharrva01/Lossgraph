@@ -77,7 +77,7 @@ export interface LinkedChargeback {
 export interface EngineBreakdown {
   transaction_model: number
   graph_engine: number
-  anomaly_engine: number
+  temporal_anomaly: number
   fused: number
 }
 

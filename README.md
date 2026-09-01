@@ -10,6 +10,28 @@ LossGraph is an AI-powered merchant risk intelligence system that detects, inves
 
 Unlike conventional fraud models that assign a risk score to individual transactions, LossGraph treats merchant risk as a **temporal, relational and evolving phenomenon**, building a continuously updated **Merchant Risk Graph** that connects transactions, customers, orders, devices, addresses, payment instruments, products, returns, refunds, and chargebacks.
 
+## Screenshots
+
+**Command Center** -- every row is a Loss Event, not a flagged transaction; exposure, confidence and recommended action all economically derived, not threshold cutoffs.
+
+![Command Center](./docs/screenshots/command-center.png)
+
+**Incident detail** -- the "How the confidence score was computed" panel breaks the fused confidence back down into the three engines that produced it, the evidence chain traces every claim to a real number, and the AI Investigator writes an evidence-grounded case file (Gemini, citation-checked, never sees ground truth).
+
+![Incident detail](./docs/screenshots/incident-detail.png)
+
+**Chargeback Responder** -- 172 disputes get an evidence checklist and a CONTEST/ACCEPT/ESCALATE recommendation, cross-referenced against this system's own prior detection.
+
+![Chargebacks list](./docs/screenshots/chargebacks-list.png)
+
+**Chargeback case detail** -- a dispute already linked to a Loss Event is recommended for ACCEPT, not contested, with the contradiction and reasoning spelled out.
+
+![Chargeback detail](./docs/screenshots/chargeback-detail.png)
+
+**How It Works** -- a plain-language walkthrough of the full pipeline, grounded in the same honest evaluation numbers as `docs/EVALUATION.md`.
+
+![How It Works](./docs/screenshots/how-it-works.png)
+
 ## Key Features (built and running -- see `docs/ARCHITECTURE.md` for what wasn't)
 
 - **Transaction Intelligence**: LightGBM risk model on leakage-safe, pre-authorization features

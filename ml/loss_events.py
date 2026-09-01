@@ -141,6 +141,13 @@ def build_cluster_events(fused: pd.DataFrame, components: pd.DataFrame, merchant
             "start_time": start_time.isoformat(),
             "detection_time": end_time.isoformat(),
             "confidence": round(float(txns["fused_score"].mean()), 3),
+            # Mirrors exactly what "confidence" above averages, so the UI's
+            # per-engine breakdown can never drift from the number it explains.
+            "confidence_components": {
+                "transaction_model": round(float(txns["risk_score"].mean()), 4),
+                "graph_engine": round(float(txns["graph_risk_score"].mean()), 4),
+                "temporal_anomaly": round(float(txns["anomaly_score"].mean()), 4),
+            },
             "exposure_estimate": round(float((txns["amount"] * txns["fused_score"]).sum()), 2),
             "gross_amount_at_risk": round(float(txns["amount"].sum()), 2),
             "affected_transaction_count": int(len(txns)),
@@ -226,6 +233,16 @@ def build_temporal_events(fused: pd.DataFrame, daily: pd.DataFrame, cluster_even
             "start_time": day.date.isoformat(),
             "detection_time": day.date.isoformat(),
             "confidence": round(float(event_confidence), 3),
+            # day_anomaly_score here, NOT a mean of the per-transaction anomaly_score
+            # column -- this event's confidence is driven by the merchant-day z-score
+            # directly (see event_confidence above), and the two are not the same
+            # number. Averaging per-transaction anomaly_score here previously produced
+            # a breakdown panel that silently contradicted the headline confidence.
+            "confidence_components": {
+                "transaction_model": round(float(mean_risk), 4),
+                "graph_engine": round(float(mean_graph), 4),
+                "temporal_anomaly": round(float(day_anomaly_score), 4),
+            },
             "exposure_estimate": round(float(txns["amount"].sum() * event_confidence), 2),
             "gross_amount_at_risk": round(float(txns["amount"].sum()), 2),
             "affected_transaction_count": int(len(txns)),

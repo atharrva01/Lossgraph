@@ -123,20 +123,29 @@ def command_center_summary(merchant_id: str | None = None) -> dict:
 
 
 def engine_breakdown_for_event(event: dict) -> dict:
-    """The three per-engine scores that were fused into this event's
-    confidence, averaged over its member transactions -- this is what
-    actually makes the fused number legible instead of a black box.
-    Computed on the fly from fused_scores.csv rather than stored on the
-    event itself, so this didn't require re-running the LLM-dependent
-    pipeline stages to add."""
+    """The three per-engine scores that produced this event's confidence.
+
+    Read from confidence_components, computed by ml/loss_events.py at the
+    same time as confidence itself -- for a temporal event that's the
+    merchant-day anomaly z-score, NOT a mean of the per-transaction
+    anomaly_score column (those are different numbers; averaging the wrong
+    one previously produced a breakdown that silently contradicted the
+    headline confidence). Falling back to a live re-derivation from
+    fused_scores.csv only covers an artifact built before this field
+    existed, and is only exact for cluster-source events.
+    """
+    components = event.get("confidence_components")
+    if components:
+        return {**components, "fused": event["confidence"]}
+
     fused = load_fused_scores()
     txns = fused[fused["transaction_id"].isin(event["transaction_ids"])]
     if txns.empty:
-        return {"transaction_model": 0.0, "graph_engine": 0.0, "anomaly_engine": 0.0, "fused": event["confidence"]}
+        return {"transaction_model": 0.0, "graph_engine": 0.0, "temporal_anomaly": 0.0, "fused": event["confidence"]}
     return {
         "transaction_model": round(float(txns["risk_score"].mean()), 4),
         "graph_engine": round(float(txns["graph_risk_score"].mean()), 4),
-        "anomaly_engine": round(float(txns["anomaly_score"].mean()), 4),
+        "temporal_anomaly": round(float(txns["anomaly_score"].mean()), 4),
         "fused": round(float(txns["fused_score"].mean()), 4),
     }
 

@@ -18,7 +18,7 @@ const ROWS: { key: keyof Omit<EngineBreakdownData, 'fused'>; label: string; blur
     bar: 'linear-gradient(90deg, #C4B5FD, #7C3AED)',
   },
   {
-    key: 'anomaly_engine',
+    key: 'temporal_anomaly',
     label: 'Temporal anomaly engine',
     blurb: "This merchant's daily return/dispute rate, compared to its own recent baseline",
     bar: 'linear-gradient(90deg, #FCD34D, #D97706)',
