@@ -2,12 +2,12 @@
 
 This describes the system as built, not as originally envisioned. Where
 the two differ, the difference is called out with the reasoning -- a
-5-day solo build against a Sep 5 deadline required cutting real scope
-(Neo4j, LLM investigator, chargeback responder, live Razorpay integration,
-authentication) to what's actually gradeable: a working detector, held-out
-precision/recall, honest false-positive cost, and a strictly defensive
-system. See `ROADMAP.md` for the day-by-day build log and `docs/
-EVALUATION.md` for the numbers this architecture produces.
+solo build against a Sep 5 deadline required cutting real scope (Neo4j,
+chargeback responder, live Razorpay integration, authentication) to what's
+actually gradeable: a working detector, held-out precision/recall, honest
+false-positive cost, and a strictly defensive system. See `ROADMAP.md` for
+the day-by-day build log and `docs/EVALUATION.md` for the numbers this
+architecture produces.
 
 ## System diagram (as built)
 
@@ -45,6 +45,14 @@ data/generation/                          ml/
                                               │ 6-policy simulation, │
                                               │ economically-optimal │
                                               │ action recommendation│
+                                              └──────────┬──────────┘
+                                                         │
+                                              ┌──────────▼──────────┐
+                                              │ investigator.py      │
+                                              │ Claude Opus 5 case-  │
+                                              │ file narrative,      │
+                                              │ citation-checked,    │
+                                              │ deterministic fallback│
                                               └──────────┬──────────┘
                                                          │
                                           ml/artifacts/loss_events_with_policy.json
@@ -105,6 +113,36 @@ where each claim maps to an underlying data value -- displayed expandable
 in the dashboard's incident drill-down, matching the product's "why do you
 believe this?" trust requirement.
 
+## AI Investigator
+
+`investigator.py` calls Claude Opus 5 to turn the evidence chain into a
+plain-English case-file narrative (incident summary, primary hypothesis,
+supporting/contradicting evidence, unknowns, confidence commentary). It
+investigates evidence; it does not detect anything itself and cannot
+override the deterministic recommendation:
+
+- **Input is restricted by construction.** The model receives the evidence
+  chain, confidence, exposure, and the already-computed `recommended_action`
+  -- never `ground_truth`. A real deployment doesn't have the oracle label;
+  including it here would let the model parrot the answer instead of
+  reasoning from evidence, defeating the point of testing whether the
+  narrative stays grounded.
+- **Structured output, not free text.** `client.messages.parse()` with a
+  Pydantic schema (`InvestigationNarrative`) guarantees a typed response;
+  the system prompt requires every claim in `supporting_evidence` /
+  `contradicting_evidence` to cite an evidence ID in parentheses.
+- **Grounding is checked, not just requested.** After parsing, every
+  citation is verified to reference a real evidence ID from the input
+  (`_citations_present`); a response that fails this check is treated as a
+  failure and falls through to the same path as an API error.
+- **Failure handling is real, not simulated.** No `ANTHROPIC_API_KEY` is
+  configured anywhere in this repo or its environment, so every narrative
+  currently on disk was produced by the deterministic fallback --
+  evidence-complete, clearly labelled `deterministic_fallback` in the data
+  and in the dashboard's "AI Investigation" panel, generated with zero API
+  calls. This is section 43's "LLM unavailable" failure path exercised for
+  real, not asserted.
+
 ## Counterfactual Simulator + Action Optimizer
 
 `counterfactual.py` simulates six candidate actions per event (allow,
@@ -146,13 +184,8 @@ not as dead code, but loading them is unbuilt.
 
 ## What the original vision (PRD) included that this doesn't
 
-Cut deliberately, for a 5-day timeline, not by accident:
+Cut deliberately, not by accident:
 
-- **LLM investigator narrative.** The evidence chain is deterministic and
-  structured (see above) -- it satisfies the "evidence-grounded
-  explanation" requirement without an LLM call the demo would depend on
-  succeeding live. Adding a narrative layer on top is additive, not
-  foundational.
 - **Chargeback responder + evidence contradiction detector.** Downstream
   of loss-event detection, not required by the graded rubric (a working
   detector + held-out eval + honest FP cost + defense-only).

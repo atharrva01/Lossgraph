@@ -16,7 +16,7 @@
 - [x] Risk Event Detection Algorithm (fusion of the three) -- `ml/loss_events.py`
 
 ## Phase 3: Analysis & Explanation
-- [ ] LLM Integration Layer
+- [x] LLM Integration Layer (Claude Opus 5, evidence-grounded, citation-checked, deterministic fallback) -- `ml/investigator.py`
 - [x] Evidence Chain Generation -- `ml/loss_events.py` (evidence IDs E1, E2... per event)
 - [x] Counterfactual Simulation Engine -- `ml/counterfactual.py`
 - [x] Action Optimizer (argmax net economic benefit over 6 candidate actions) -- `ml/counterfactual.py`
@@ -104,11 +104,21 @@ economically-optimal action recommendation.
 drill-down with evidence chain + entity graph (Cytoscape.js) + policy
 comparison. Verified end-to-end in a real browser.
 
-**Day 5 (remaining)** -- Evaluation write-up, architecture documentation,
-5-minute pitch video, repo cleanup, submission. LLM investigator narrative
-and chargeback responder are stretch goals if time remains -- not required
-for the graded rubric (held-out precision/recall + honest false-positive
-cost + strictly defensive).
+**Day 5** -- Evaluation write-up, architecture documentation, 5-minute
+pitch video script, repo cleanup.
+
+**Day 6 (stretch, buffer time before the Sep 5 deadline)** -- AI
+Investigator (`ml/investigator.py`): Claude Opus 5 turns each Loss Event's
+evidence chain into a plain-English narrative (primary hypothesis,
+supporting/contradicting evidence, unknowns, confidence commentary),
+system-prompted to cite an evidence ID for every claim and never propose an
+action other than the one the counterfactual simulator already picked.
+Every generated narrative is checked post-hoc for citations before being
+accepted. Falls back to a deterministic evidence-chain template -- verified
+working, since this repo has no API key configured -- exactly the section
+43 "LLM unavailable" failure path, not a hypothetical. Chargeback responder
+remains unbuilt; not required for the graded rubric (held-out precision/
+recall + honest false-positive cost + strictly defensive).
 
 ---
 

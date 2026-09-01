@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowLeft, Clock, FlaskConical, Target, Users } from 'lu
 import { DashboardLayout } from '@/components/DashboardLayout'
 import { EvidenceChain } from '@/components/EvidenceChain'
 import { GraphView } from '@/components/GraphView'
+import { InvestigationPanel } from '@/components/InvestigationPanel'
 import { PolicyComparison } from '@/components/PolicyComparison'
 import { StatTile } from '@/components/StatTile'
 import { incidentApi } from '@/lib/api'
@@ -99,6 +100,12 @@ export default function IncidentDetailPage() {
           iconColor="text-gray-500"
         />
       </div>
+
+      {incident.investigation && (
+        <section className="mb-8">
+          <InvestigationPanel investigation={incident.investigation} />
+        </section>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <section>

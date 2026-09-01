@@ -55,6 +55,18 @@ export interface Counterfactual {
   simulations: PolicySimulation[]
 }
 
+export interface Investigation {
+  incident_summary: string
+  primary_hypothesis: string
+  supporting_evidence: string[]
+  contradicting_evidence: string[]
+  unknowns: string[]
+  recommended_next_step: string
+  confidence_commentary: string
+  _source: 'llm' | 'deterministic_fallback'
+  _fallback_reason?: string
+}
+
 export interface IncidentDetail extends IncidentSummary {
   gross_amount_at_risk: number
   affected_entity_count: number
@@ -62,6 +74,7 @@ export interface IncidentDetail extends IncidentSummary {
   transaction_ids: string[]
   ground_truth: GroundTruth
   counterfactual: Counterfactual
+  investigation?: Investigation
 }
 
 export interface GraphNode {

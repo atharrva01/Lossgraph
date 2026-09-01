@@ -183,8 +183,37 @@ vs. doing nothing: Rs 5.6L on this held-out test split.
   reasonable starting model, not fit to any data.
 - `investigate_cluster`'s core-member threshold (0.7) is hand-set.
 
-## Next (day 4)
+## AI Investigator (`investigator.py`)
 
-LLM investigator narrative on top of the evidence chain (with a
-deterministic fallback), the merchant dashboard, and -- if time remains --
-the chargeback responder.
+```bash
+python3 -m ml.investigator
+```
+
+Turns each event's evidence chain into a plain-English case-file narrative
+using Claude Opus 5 (`client.messages.parse()` with a Pydantic output
+schema -- see `docs/ARCHITECTURE.md` for the full design). Three things
+matter more than the prose quality:
+
+1. **Ground truth is never in the model's input.** Only evidence,
+   confidence, exposure, and the already-decided `recommended_action` --
+   the same information a real deployment would have. The model narrates
+   and justifies; it does not detect or decide.
+2. **Every claim must cite a real evidence ID, checked post-hoc.**
+   `_citations_present()` verifies every sentence in `supporting_evidence`/
+   `contradicting_evidence` references an actual `E1`/`E2`/... from the
+   input. A response that fails this check is treated as a failure, not
+   accepted with a warning.
+3. **The fallback path is exercised for real, not simulated.** This repo
+   has no `ANTHROPIC_API_KEY` configured anywhere -- so every narrative
+   currently in `ml/artifacts/loss_events_with_policy.json` was produced by
+   `_fallback_narrative()`, not the LLM. Verified with a mock-client test
+   (well-formed response passes through, an uncited claim triggers
+   fallback, a raised exception triggers fallback) since the live API path
+   can't be exercised without a key -- see the git history for the test
+   script. Set `ANTHROPIC_API_KEY` before `make pipeline` to get real
+   narratives instead; nothing else about the pipeline changes.
+
+Not built: the chargeback responder (PRD section 18), which is why
+`chargeback_wave` events still get a VERIFY recommendation that doesn't
+really fit a transaction that already shipped -- there's no "contest the
+dispute" action in the current five-action framework.

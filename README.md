@@ -18,7 +18,8 @@ Unlike conventional fraud models that assign a risk score to individual transact
 - **Risk Fusion**: noisy-OR combination of all three, interpretable back to source
 - **Loss Event Genome**: structured, evidence-chained incidents (not raw transaction scores) with exposure estimates
 - **Counterfactual Reasoning**: 6-policy simulation per event, economically-optimal action recommendation
-- **Dashboard**: Command Center -> incident drill-down with evidence chain, entity graph, policy comparison
+- **AI Investigator**: Claude Opus 5 writes an evidence-grounded case-file narrative per event (citation-checked, never sees ground truth, cannot override the deterministic recommendation), with a verified deterministic fallback when no API key is configured
+- **Dashboard**: Command Center -> incident drill-down with evidence chain, entity graph, AI investigation, policy comparison
 
 ## Architecture
 
@@ -50,6 +51,7 @@ lossgraph/
 - **Models**: LightGBM
 - **Explainability**: SHAP
 - **Time-series**: NumPy, Pandas, SciPy (custom Poisson rolling z-score)
+- **AI Investigator**: Anthropic Claude Opus 5 (`client.messages.parse()`, Pydantic structured output), deterministic fallback
 
 ### Frontend
 - **Framework**: Next.js (App Router) + TypeScript + Tailwind CSS
